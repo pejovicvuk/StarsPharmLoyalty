@@ -15,6 +15,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { registerUser } from '../services/authService';
+import Checkbox from 'expo-checkbox';
 
 interface RegisterPageProps {
   onRegisterSuccess: () => void;
@@ -34,9 +35,14 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [gender, setGender] = useState('');
   const [phone, setPhone] = useState('');
+  const [agreesToTerms, setAgreesToTerms] = useState(false);
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showGenderPicker, setShowGenderPicker] = useState(false);
+
+  // Add new state for temporary date selection
+  const [tempDate, setTempDate] = useState(new Date(2000, 0, 1));
 
   const validateInputs = () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword || !dateOfBirth || !gender || !phone) {
@@ -82,6 +88,11 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
       return;
     }
     
+    if (!agreesToTerms) {
+      Alert.alert('Greška', 'Morate prihvatiti uslove korišćenja da biste nastavili.');
+      return;
+    }
+    
     setIsLoading(true);
     setError('');
     
@@ -109,21 +120,32 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
       
     } catch (error: any) {
       console.error('Registration error:', error);
-      setError(error.message || 'Došlo je do greške pri registraciji');
+      if (error.message.includes('Email address') && error.message.includes('invalid')) {
+        setError('Email adresa nije validna. Molimo unesite postojeću email adresu.');
+      } else {
+        setError('Došlo je do greške pri registraciji. Pokušajte ponovo.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setDateOfBirth(selectedDate);
-    }
-  };
-
   const formatDate = (date: Date) => {
     return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}.`;
+  };
+
+  // Add phone number formatting
+  const formatPhoneNumber = (input: string) => {
+    // Remove any non-digit characters
+    let digits = input.replace(/\D/g, '');
+    
+    // If the number doesn't start with +381, add it
+    if (!digits.startsWith('381')) {
+      digits = '381' + digits;
+    }
+    
+    // Format as +381 XX XXXXXX
+    return '+' + digits.replace(/(\d{3})(\d{2})(\d{6})/, '$1 $2 $3');
   };
 
   return (
@@ -182,6 +204,7 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
                 onChangeText={setPassword}
                 secureTextEntry
               />
+              <Text style={styles.passwordHint}>(najmanje 6 znakova)</Text>
             </View>
             
             <View style={styles.inputContainer}>
@@ -209,37 +232,104 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
               </TouchableOpacity>
               
               {showDatePicker && (
-                <DateTimePicker
-                  testID="dateTimePicker"
-                  value={dateOfBirth}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onDateChange}
-                  maximumDate={new Date()}
-                />
+                <View style={styles.datePickerContainer}>
+                  {Platform.OS === 'ios' && (
+                    <View style={styles.datePickerHeader}>
+                      <TouchableOpacity 
+                        onPress={() => setShowDatePicker(false)}
+                      >
+                        <Text style={styles.datePickerButtonText}>Otkaži</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setDateOfBirth(tempDate);
+                          setShowDatePicker(false);
+                        }}
+                      >
+                        <Text style={[styles.datePickerButtonText, styles.confirmButton]}>OK</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  <DateTimePicker
+                    testID="dateTimePicker"
+                    value={Platform.OS === 'ios' ? tempDate : dateOfBirth}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, selectedDate) => {
+                      if (Platform.OS === 'android') {
+                        setShowDatePicker(false);
+                        if (selectedDate) {
+                          setDateOfBirth(selectedDate);
+                        }
+                      } else {
+                        if (selectedDate) {
+                          setTempDate(selectedDate);
+                        }
+                      }
+                    }}
+                    maximumDate={new Date()}
+                  />
+                </View>
               )}
             </View>
             
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Pol</Text>
-              <TextInput
+              <TouchableOpacity 
                 style={styles.input}
-                placeholder="Unesite vaš pol (Muški/Ženski)"
-                value={gender}
-                onChangeText={setGender}
-              />
+                onPress={() => setShowGenderPicker(true)}
+              >
+                <Text style={gender ? styles.pickerValue : styles.pickerPlaceholder}>
+                  {gender || 'Izaberite pol'}
+                </Text>
+              </TouchableOpacity>
+              
+              {showGenderPicker && (
+                <View style={styles.modalContainer}>
+                  <Picker
+                    selectedValue={gender}
+                    onValueChange={(itemValue) => {
+                      setGender(itemValue);
+                      setShowGenderPicker(false);
+                    }}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Izaberite pol" value="" />
+                    <Picker.Item label="Muški" value="muški" />
+                    <Picker.Item label="Ženski" value="ženski" />
+                  </Picker>
+                </View>
+              )}
             </View>
             
-            <View style={[styles.inputContainer, { marginTop: 10 }]}>
+            <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Telefon</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Unesite vaš broj telefona"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-              />
+              <View style={styles.phoneInputContainer}>
+                <Text style={styles.phonePrefix}>+381</Text>
+                <TextInput
+                  style={[styles.input, styles.phoneInput]}
+                  placeholder="6X XXXXXX"
+                  value={phone.replace('+381', '')}
+                  onChangeText={(text) => setPhone(formatPhoneNumber(text))}
+                  keyboardType="phone-pad"
+                />
+              </View>
             </View>
+          </View>
+          
+          <View style={styles.termsContainer}>
+            <Checkbox
+              value={agreesToTerms}
+              onValueChange={setAgreesToTerms}
+              color={agreesToTerms ? '#4A9B7F' : undefined}
+              style={styles.checkbox}
+            />
+            <Text style={styles.termsText}>
+              Saglasan/na sam da primam obaveštenja o promotivnim akcijama, 
+              podsetnicima za preuzimanje lekova i drugim relevantnim informacijama 
+              putem dostavljenih kontakt podataka, u skladu sa Zakonom o zaštiti 
+              podataka o ličnosti.
+            </Text>
           </View>
           
           <TouchableOpacity
@@ -344,17 +434,101 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pickerContainer: {
-    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
     borderRadius: 8,
-    marginBottom: 15,
+    backgroundColor: '#FFFFFF',
+    marginTop: 4,
   },
   picker: {
-    height: 50,
-    width: '100%',
+    height: 200,
+    backgroundColor: 'white',
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  phonePrefix: {
+    paddingLeft: 12,
+    paddingRight: 4,
+    color: '#666666',
+    fontSize: 16,
+  },
+  phoneInput: {
+    flex: 1,
+    borderWidth: 0,
+  },
+  passwordHint: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 4,
+    marginLeft: 2,
+  },
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 16,
+    paddingHorizontal: 16,
+  },
+  checkbox: {
+    marginRight: 10,
+    marginTop: 2,
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
+  },
+  pickerValue: {
+    fontSize: 16,
     color: '#333',
   },
-  pickerItem: {
+  pickerPlaceholder: {
     fontSize: 16,
+    color: '#999',
+  },
+  modalContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderColor: '#E8E8E8',
+    zIndex: 1000,
+    maxHeight: 200,
+  },
+  datePickerContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    zIndex: 1000,
+    borderTopWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+    color: '#8BC8A3',
+    paddingHorizontal: 10,
+  },
+  confirmButton: {
+    fontWeight: '600',
   },
 });
 

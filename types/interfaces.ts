@@ -45,4 +45,13 @@ export interface ClientModel {
 export interface PharmacistModel {
   id: number;
   user_id: number;
-} 
+}
+export interface ShopItem {
+  id: string;  // This should be a UUID string
+  item_name: string;
+  description: string;
+  image_url?: string;
+  star_price: number;
+  quantity: number;
+  created_at: string;
+}

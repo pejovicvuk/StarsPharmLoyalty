@@ -33,7 +33,7 @@ const Header = ({
           )}
         </View>
         
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title} numberOfLines={1}>{title}</Text>
         
         <View style={styles.rightContainer}>
           {rightButtonAction && (rightButtonIcon || rightButtonText) && (
@@ -41,7 +41,7 @@ const Header = ({
               {rightButtonIcon ? (
                 <Ionicons name={rightButtonIcon as any} size={24} color="#ffffff" />
               ) : (
-                <Text style={styles.rightButtonText}>{rightButtonText}</Text>
+                <Text style={styles.rightButtonText} numberOfLines={1}>{rightButtonText}</Text>
               )}
             </TouchableOpacity>
           )}
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     width: 40,
   },
   rightContainer: {
-    width: 40,
+    minWidth: 80,
     alignItems: 'flex-end',
   },
   iconButton: {
@@ -80,6 +80,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '500',
+    paddingHorizontal: 8,
   },
   title: {
     color: '#ffffff',

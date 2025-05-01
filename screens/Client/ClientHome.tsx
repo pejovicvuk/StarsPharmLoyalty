@@ -13,16 +13,22 @@ import Header from '../../components/Header';
 import { supabase } from '../../supabase';
 import { User, ClientModel } from '../../types/interfaces';
 import { fetchClientDetails } from '../../services/authService';
+import ProfileSettings from './ProfileSettings';
+import StarsShop from './StarsShop';
+import { purchaseItem } from '../../services/shopService';
 
 interface ClientHomeProps {
   user: User;
   onLogout: () => void;
+  onNavigateToSettings?: () => void;
 }
 
-const ClientHome = ({ user, onLogout }: ClientHomeProps) => {
+const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) => {
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [clientDetails, setClientDetails] = useState<ClientModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showShop, setShowShop] = useState(false);
   
   useEffect(() => {
     // Fetch client data from Supabase
@@ -47,120 +53,148 @@ const ClientHome = ({ user, onLogout }: ClientHomeProps) => {
     fetchClientData();
   }, [user.userId]);
 
+  const handleProfileUpdate = async () => {
+    // Refresh client data after update
+    const updatedData = await fetchClientDetails(user.userId);
+    if (updatedData) {
+      setClientDetails(updatedData);
+    }
+  };
+
+  const handlePurchase = async (itemId: string): Promise<void> => {
+    try {
+      await purchaseItem(user.userId, itemId);
+      const updatedData = await fetchClientDetails(user.userId);
+      if (updatedData) {
+        setClientDetails(updatedData);
+        setLoyaltyPoints(updatedData.stars);
+      }
+    } catch (error: any) {
+      throw error; // Let StarsShop handle the error display
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Header 
         title="Klijent Panel" 
-        rightButtonText="Nazad na odabir uloge"
+        rightButtonText="Odjavi se"
         rightButtonAction={onLogout}
       />
 
-      <ScrollView style={styles.scrollContainer}>
-        {/* Loyalty Card Section */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Vaša Kartica Lojalnosti</Text>
-          <Text style={styles.cardSubtitle}>{user.name} {user.surname}</Text>
-          
-          <View style={styles.qrContainer}>
-            <Image 
-              source={require('../../assets/qr-placeholder.png')} 
-              style={styles.qrCode}
-              resizeMode="contain"
-            />
-          </View>
-          
-          <Text style={styles.cardCaption}>
-            Pokažite ovaj kod farmaceutu za skupljanje poena.
-          </Text>
-          
-          {clientDetails?.qr_code && (
-            <Text style={styles.qrText}>
-              QR Code: {clientDetails.qr_code}
+      {showSettings && clientDetails ? (
+        <ProfileSettings
+          clientDetails={clientDetails}
+          onBack={() => setShowSettings(false)}
+          onUpdate={handleProfileUpdate}
+        />
+      ) : showShop ? (
+        <StarsShop
+          userStars={loyaltyPoints}
+          onBack={() => setShowShop(false)}
+          onPurchase={handlePurchase}
+        />
+      ) : (
+        <ScrollView style={styles.scrollContainer}>
+          {/* Loyalty Card Section */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Vaša Kartica Lojalnosti</Text>
+            <Text style={[styles.cardSubtitle, styles.clientName]}>{user.name} {user.surname}</Text>
+            
+            <View style={styles.qrContainer}>
+              <Image 
+                source={require('../../assets/qr-placeholder.png')} 
+                style={styles.qrCode}
+                resizeMode="contain"
+              />
+            </View>
+            
+            <Text style={styles.cardCaption}>
+              Pokažite ovaj kod farmaceutu za skupljanje poena.
             </Text>
-          )}
-        </View>
-
-        {/* Stars Balance Section */}
-        <View style={styles.card}>
-          <View style={styles.titleWithIcon}>
-            <Ionicons name="star" size={20} color="#E6C34A" />
-            <Text style={styles.cardTitle}>Vaši Stars Poeni</Text>
+            
+            {clientDetails?.qr_code && (
+              <Text style={styles.qrText}>
+                QR Code: {clientDetails.qr_code}
+              </Text>
+            )}
           </View>
-          
-          <Text style={styles.pointsText}>{loyaltyPoints}</Text>
-          <Text style={styles.cardSubtitle}>Skupljajte poene pri svakoj kupovini!</Text>
-          
-          <TouchableOpacity style={styles.buttonOutline}>
-            <Text style={styles.buttonOutlineText}>Pogledaj Stars Prodavnicu</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Client Details Section */}
-        {clientDetails && (
+          {/* Stars Balance Section */}
           <View style={styles.card}>
             <View style={styles.titleWithIcon}>
-              <Ionicons name="information-circle-outline" size={20} color="#8BC8A3" />
-              <Text style={styles.cardTitle}>Vaši Podaci</Text>
+              <Ionicons name="star" size={20} color="#E6C34A" />
+              <Text style={styles.cardTitle}>Vaši Stars Poeni</Text>
             </View>
             
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Godine:</Text>
-              <Text style={styles.detailValue}>{clientDetails.date_of_birth}</Text>
-            </View>
+            <Text style={styles.pointsText}>{loyaltyPoints}</Text>
+            <Text style={styles.cardSubtitle}>Skupljajte poene pri svakoj kupovini!</Text>
             
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Pol:</Text>
-              <Text style={styles.detailValue}>{clientDetails.gender}</Text>
+            <TouchableOpacity 
+              style={styles.buttonOutline}
+              onPress={() => setShowShop(true)}
+            >
+              <Text style={styles.buttonOutlineText}>Pregledaj Stars Prodavnicu</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Prescription Reminder Section */}
+          <View style={styles.card}>
+            <View style={styles.titleWithIcon}>
+              <Ionicons name="notifications-outline" size={20} color="#8BC8A3" />
+              <Text style={styles.cardTitle}>Podsetnici za Recepte</Text>
             </View>
+            <Text style={styles.cardSubtitle}>Pogledajte kada treba obnoviti recepte.</Text>
             
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Telefon:</Text>
-              <Text style={styles.detailValue}>{clientDetails.phone}</Text>
+            <TouchableOpacity style={styles.buttonFilled}>
+              <Text style={styles.buttonFilledText}>Moji Recepti</Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.noteText}>Podsetnici će se pojaviti ovde.</Text>
+          </View>
+
+          {/* Client Details Section */}
+          {clientDetails && (
+            <View style={styles.card}>
+              <View style={styles.titleWithIcon}>
+                <Ionicons name="information-circle-outline" size={20} color="#8BC8A3" />
+                <Text style={styles.cardTitle}>Vaši Podaci</Text>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Godine:</Text>
+                <Text style={styles.detailValue}>{clientDetails.date_of_birth}</Text>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Pol:</Text>
+                <Text style={styles.detailValue}>{clientDetails.gender}</Text>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Telefon:</Text>
+                <Text style={styles.detailValue}>{clientDetails.phone}</Text>
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
-        {/* Edit Profile Section */}
-        <View style={styles.card}>
-          <View style={styles.titleWithIcon}>
-            <Ionicons name="person-circle-outline" size={20} color="#8BC8A3" />
-            <Text style={styles.cardTitle}>Uredi Profil</Text>
+          {/* Edit Profile Section */}
+          <View style={styles.card}>
+            <View style={styles.titleWithIcon}>
+              <Ionicons name="person-circle-outline" size={20} color="#8BC8A3" />
+              <Text style={styles.cardTitle}>Uredi Profil</Text>
+            </View>
+            <Text style={styles.cardSubtitle}>Ažurirajte vaše lične podatke.</Text>
+            
+            <TouchableOpacity 
+              style={styles.buttonFilled}
+              onPress={() => setShowSettings(true)}
+            >
+              <Text style={styles.buttonFilledText}>Podešavanja Profila</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.cardSubtitle}>Ažurirajte vaše lične podatke.</Text>
-          
-          <TouchableOpacity style={styles.buttonFilled}>
-            <Text style={styles.buttonFilledText}>Podešavanja Profila</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Stars Shop Access Section */}
-        <View style={styles.card}>
-          <View style={styles.titleWithIcon}>
-            <Ionicons name="gift-outline" size={20} color="#8BC8A3" />
-            <Text style={styles.cardTitle}>Stars Prodavnica</Text>
-          </View>
-          <Text style={styles.cardSubtitle}>Iskoristite svoje poene za nagrade.</Text>
-          
-          <TouchableOpacity style={styles.buttonFilled}>
-            <Text style={styles.buttonFilledText}>Pregledaj Nagrade</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Prescription Reminder Section */}
-        <View style={styles.card}>
-          <View style={styles.titleWithIcon}>
-            <Ionicons name="notifications-outline" size={20} color="#8BC8A3" />
-            <Text style={styles.cardTitle}>Podsetnici za Recepte</Text>
-          </View>
-          <Text style={styles.cardSubtitle}>Pogledajte kada treba obnoviti recepte.</Text>
-          
-          <TouchableOpacity style={styles.buttonFilled}>
-            <Text style={styles.buttonFilledText}>Moji Recepti</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.noteText}>Podsetnici će se pojaviti ovde.</Text>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </View>
   );
 };
@@ -188,17 +222,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
+    justifyContent: 'center',
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#4A9B7F',
     marginLeft: 5,
+    textAlign: 'center',
   },
   cardSubtitle: {
     fontSize: 14,
     color: '#666',
     marginBottom: 15,
+  },
+  clientName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   qrContainer: {
     alignItems: 'center',
@@ -292,6 +335,14 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
     fontSize: 14,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 10,
+    width: '100%',
   },
 });
 
