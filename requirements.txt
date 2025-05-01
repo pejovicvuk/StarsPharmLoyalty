@@ -1,10 +1,20 @@
+# Core dependencies
 expo ~52.0.46
 expo-status-bar ~2.0.1
+expo-constants ~17.0.8
 react 18.3.1
 react-native 0.76.9
-
-
 @expo/vector-icons
+
+# Authentication and data storage
+@supabase/supabase-js ^2.49.4
+@react-native-async-storage/async-storage ^2.1.2
+react-native-url-polyfill ^2.0.0
+dotenv ^16.5.0
+
+# UI components
+@react-native-community/datetimepicker 8.2.0
+@react-native-picker/picker 2.9.0
 
 # Development dependencies
 @babel/core ^7.25.2
