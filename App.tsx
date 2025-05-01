@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import LoginPage from './screens/LoginPage';
+import RegisterPage from './screens/RegisterPage';
 import ClientHome from './screens/Client/ClientHome';
 import PharmacistHome from './screens/Pharmacist/PharmacistHome';
 
@@ -12,14 +13,22 @@ interface User {
   name: string;
   surname: string;
   role: string;
-  token: string;
 }
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
 
   const handleLogout = () => {
     setUser(null);
+  };
+
+  const handleNavigateToRegister = () => {
+    setShowRegister(true);
+  };
+
+  const handleNavigateToLogin = () => {
+    setShowRegister(false);
   };
 
   return (
@@ -32,8 +41,18 @@ export default function App() {
           <PharmacistHome user={user} onLogout={handleLogout} />
         )
       ) : (
-        // If no user is logged in, show the login page
-        <LoginPage onLogin={setUser} />
+        // If no user is logged in, show either login or register page
+        showRegister ? (
+          <RegisterPage 
+            onRegisterSuccess={handleNavigateToLogin} 
+            onBackToLogin={handleNavigateToLogin} 
+          />
+        ) : (
+          <LoginPage 
+            onLogin={setUser} 
+            onRegister={handleNavigateToRegister} 
+          />
+        )
       )}
       <StatusBar style="auto" />
     </View>

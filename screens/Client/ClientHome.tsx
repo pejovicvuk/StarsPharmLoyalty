@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,22 +6,46 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
+import { supabase } from '../../supabase';
+import { User, ClientModel } from '../../types/interfaces';
+import { fetchClientDetails } from '../../services/authService';
 
 interface ClientHomeProps {
-  user: {
-    name: string;
-    surname: string;
-    userId: string;
-  };
+  user: User;
   onLogout: () => void;
 }
 
 const ClientHome = ({ user, onLogout }: ClientHomeProps) => {
-  // Mock data
-  const loyaltyPoints = 120;
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [clientDetails, setClientDetails] = useState<ClientModel | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    // Fetch client data from Supabase
+    const fetchClientData = async () => {
+      try {
+        setIsLoading(true);
+        const clientData = await fetchClientDetails(user.userId);
+        
+        if (clientData) {
+          setClientDetails(clientData);
+          setLoyaltyPoints(clientData.stars);
+        } else {
+          console.error('No client data found for user ID:', user.userId);
+        }
+      } catch (error) {
+        console.error('Error fetching client data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchClientData();
+  }, [user.userId]);
 
   return (
     <View style={styles.container}>
@@ -42,14 +66,18 @@ const ClientHome = ({ user, onLogout }: ClientHomeProps) => {
               source={require('../../assets/qr-placeholder.png')} 
               style={styles.qrCode}
               resizeMode="contain"
-              // If you don't have the image, use this placeholder instead:
-              // defaultSource={require('../../assets/qr-placeholder.png')}
             />
           </View>
           
           <Text style={styles.cardCaption}>
             Pokažite ovaj kod farmaceutu za skupljanje poena.
           </Text>
+          
+          {clientDetails?.qr_code && (
+            <Text style={styles.qrText}>
+              QR Code: {clientDetails.qr_code}
+            </Text>
+          )}
         </View>
 
         {/* Stars Balance Section */}
@@ -66,6 +94,31 @@ const ClientHome = ({ user, onLogout }: ClientHomeProps) => {
             <Text style={styles.buttonOutlineText}>Pogledaj Stars Prodavnicu</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Client Details Section */}
+        {clientDetails && (
+          <View style={styles.card}>
+            <View style={styles.titleWithIcon}>
+              <Ionicons name="information-circle-outline" size={20} color="#8BC8A3" />
+              <Text style={styles.cardTitle}>Vaši Podaci</Text>
+            </View>
+            
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Godine:</Text>
+              <Text style={styles.detailValue}>{clientDetails.date_of_birth}</Text>
+            </View>
+            
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Pol:</Text>
+              <Text style={styles.detailValue}>{clientDetails.gender}</Text>
+            </View>
+            
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Telefon:</Text>
+              <Text style={styles.detailValue}>{clientDetails.phone}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Edit Profile Section */}
         <View style={styles.card}>
@@ -161,6 +214,12 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
   },
+  qrText: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5,
+  },
   cardCaption: {
     textAlign: 'center',
     fontSize: 14,
@@ -173,6 +232,22 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
     marginVertical: 10,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#333',
   },
   buttonOutline: {
     borderWidth: 1,
@@ -205,6 +280,18 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 10,
+  },
+  buttonLight: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  buttonLightText: {
+    color: '#333',
+    fontWeight: '500',
+    fontSize: 14,
   },
 });
 

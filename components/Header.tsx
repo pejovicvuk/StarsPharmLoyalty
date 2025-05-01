@@ -10,7 +10,7 @@ interface HeaderProps {
   rightButtonIcon?: string;
   rightButtonText?: string;
 }
-
+ 
 const Header = ({ 
   title, 
   onBackPress, 
