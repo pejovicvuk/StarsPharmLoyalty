@@ -16,6 +16,7 @@ import { fetchClientDetails } from '../../services/authService';
 import ProfileSettings from './ProfileSettings';
 import StarsShop from './StarsShop';
 import { purchaseItem } from '../../services/shopService';
+import UserQRCode from '../../components/UserQRCode';
 
 interface ClientHomeProps {
   user: User;
@@ -96,28 +97,20 @@ const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) =
         />
       ) : (
         <ScrollView style={styles.scrollContainer}>
-          {/* Loyalty Card Section */}
+          {/* Loyalty Card Section with QR Code */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Vaša Kartica Lojalnosti</Text>
-            <Text style={[styles.cardSubtitle, styles.clientName]}>{user.name} {user.surname}</Text>
+            <Text style={[styles.cardSubtitle, styles.clientName]}>
+              {user.name} {user.surname}
+            </Text>
             
             <View style={styles.qrContainer}>
-              <Image 
-                source={require('../../assets/qr-placeholder.png')} 
-                style={styles.qrCode}
-                resizeMode="contain"
-              />
+              <UserQRCode userId={user.userId} size={180} />
             </View>
             
             <Text style={styles.cardCaption}>
               Pokažite ovaj kod farmaceutu za skupljanje poena.
             </Text>
-            
-            {clientDetails?.qr_code && (
-              <Text style={styles.qrText}>
-                QR Code: {clientDetails.qr_code}
-              </Text>
-            )}
           </View>
 
           {/* Stars Balance Section */}
@@ -134,23 +127,11 @@ const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) =
               style={styles.buttonOutline}
               onPress={() => setShowShop(true)}
             >
-              <Text style={styles.buttonOutlineText}>Pregledaj Stars Prodavnicu</Text>
+              <View style={styles.buttonContent}>
+                <Ionicons name="cart-outline" size={20} color="#8BC8A3" style={styles.buttonIcon} />
+                <Text style={styles.buttonOutlineText}>Pregledaj Stars Prodavnicu</Text>
+              </View>
             </TouchableOpacity>
-          </View>
-
-          {/* Prescription Reminder Section */}
-          <View style={styles.card}>
-            <View style={styles.titleWithIcon}>
-              <Ionicons name="notifications-outline" size={20} color="#8BC8A3" />
-              <Text style={styles.cardTitle}>Podsetnici za Recepte</Text>
-            </View>
-            <Text style={styles.cardSubtitle}>Pogledajte kada treba obnoviti recepte.</Text>
-            
-            <TouchableOpacity style={styles.buttonFilled}>
-              <Text style={styles.buttonFilledText}>Moji Recepti</Text>
-            </TouchableOpacity>
-            
-            <Text style={styles.noteText}>Podsetnici će se pojaviti ovde.</Text>
           </View>
 
           {/* Client Details Section */}
@@ -249,8 +230,6 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#fff',
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#eee',
     alignSelf: 'center',
   },
   qrCode: {
@@ -343,6 +322,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
     width: '100%',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
 });
 

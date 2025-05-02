@@ -57,18 +57,6 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
             </Text>
           </View>
 
-          {/* Confirm Purchase Section */}
-          <View style={styles.card}>
-            <View style={styles.titleWithIcon}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#4A9B7F" />
-              <Text style={styles.cardTitle}>Potvrdi Stars Kupovinu</Text>
-            </View>
-            <Text style={styles.cardSubtitle}>Unesite kod za potvrdu kupovine nagrade.</Text>
-            
-            <TouchableOpacity style={styles.buttonLight}>
-              <Text style={styles.buttonLightText}>Potvrdi Kupovinu</Text>
-            </TouchableOpacity>
-          </View>
 
           {/* Manage Stars Shop Section */}
           <View style={styles.card}>
@@ -86,18 +74,7 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
             </TouchableOpacity>
           </View>
 
-          {/* Manage Prescriptions Section */}
-          <View style={styles.card}>
-            <View style={styles.titleWithIcon}>
-              <Ionicons name="list-outline" size={20} color="#4A9B7F" />
-              <Text style={styles.cardTitle}>Upravljaj Receptima</Text>
-            </View>
-            <Text style={styles.cardSubtitle}>Dodaj recepte i pregledaj podsetnike.</Text>
-            
-            <TouchableOpacity style={styles.buttonLight}>
-              <Text style={styles.buttonLightText}>Upravljaj Receptima</Text>
-            </TouchableOpacity>
-          </View>
+     
         </ScrollView>
       )}
     </View>
