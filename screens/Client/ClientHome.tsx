@@ -78,7 +78,7 @@ const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) =
   return (
     <View style={styles.container}>
       <Header 
-        title="Klijent Panel" 
+        title="StarsPharm Loyalty App" 
         rightButtonText="Odjavi se"
         rightButtonAction={onLogout}
       />
@@ -99,7 +99,7 @@ const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) =
         <ScrollView style={styles.scrollContainer}>
           {/* Loyalty Card Section with QR Code */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Vaša Kartica Lojalnosti</Text>
+            <Text style={styles.cardTitle}> Vaša Kartica Lojalnosti</Text>
             <Text style={[styles.cardSubtitle, styles.clientName]}>
               {user.name} {user.surname}
             </Text>
