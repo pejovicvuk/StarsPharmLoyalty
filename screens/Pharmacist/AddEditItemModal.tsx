@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ShopItem } from '../../types/interfaces';
 import { addShopItem, updateShopItem } from '../../services/shopService';
 import { supabase } from '../../supabase';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 
 interface AddEditItemModalProps {
   visible: boolean;
@@ -37,7 +39,10 @@ const AddEditItemModal = ({ visible, item, onClose, onSave }: AddEditItemModalPr
       setDescription(item.description);
       setStarsPrice(item.star_price.toString());
       setQuantity(item.quantity.toString());
-      setImageUrl(item.image_url || null);
+      setImageUrl(item.image || null);
+      
+      // Debug log to check the image URL
+      console.log('Loading item with image URL:', item.image);
     } else {
       resetForm();
     }
@@ -53,52 +58,54 @@ const AddEditItemModal = ({ visible, item, onClose, onSave }: AddEditItemModalPr
 
   const pickImage = async () => {
     try {
+      // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Potrebna dozvola', 'Potrebna je dozvola za pristup galeriji.');
         return;
       }
-
+      
+      // Use fullscreen presentation style to fix iOS 12 crash
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
+        presentationStyle: ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN
       });
 
-      console.log('Image picker result:', result); // Debug log
-
-      if (!result.canceled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setLoading(true);
         try {
-          const file = {
-            uri: result.assets[0].uri,
-            name: `shop-item-${Date.now()}.jpg`,
-            type: 'image/jpeg',
-          };
-
-          console.log('Preparing to upload file:', file); // Debug log
-
-          const response = await fetch(file.uri);
+          const localUri = result.assets[0].uri;
+          
+          // First, fetch the image data
+          const response = await fetch(localUri);
           const blob = await response.blob();
-
+          
+          // Create a unique filename
+          const filename = `shop-item-${Date.now()}.jpg`;
+          
+          // Upload to Supabase storage
           const { data, error } = await supabase.storage
             .from('shop-items')
-            .upload(file.name, blob, {
-              contentType: 'image/jpeg',
-              cacheControl: '3600'
-            });
-
+            .upload(filename, blob);
+            
           if (error) throw error;
-
-          const { data: { publicUrl } } = supabase.storage
+          
+          // Get the public URL
+          const { data: publicUrlData } = supabase.storage
             .from('shop-items')
-            .getPublicUrl(file.name);
-
-          console.log('Upload successful, public URL:', publicUrl); // Debug log
-          setImageUrl(publicUrl);
+            .getPublicUrl(filename);
+            
+          // Save the public URL, not the local URI
+          setImageUrl(publicUrlData.publicUrl);
+          Alert.alert('Uspeh', 'Slika je uspešno otpremljena.');
         } catch (error) {
           console.error('Upload error:', error);
-          Alert.alert('Greška', 'Nije moguće otpremiti sliku. Molimo pokušajte ponovo.');
+          Alert.alert('Greška', 'Nije moguće otpremiti sliku: ' + (error instanceof Error ? error.message : String(error)));
+        } finally {
+          setLoading(false);
         }
       }
     } catch (error) {
@@ -120,7 +127,7 @@ const AddEditItemModal = ({ visible, item, onClose, onSave }: AddEditItemModalPr
         description: description || '',
         star_price: parseInt(starsPrice),
         quantity: parseInt(quantity),
-        image: imageUrl || null
+        image: imageUrl || ''
       };
 
       console.log('Saving item:', itemData);
@@ -145,7 +152,7 @@ const AddEditItemModal = ({ visible, item, onClose, onSave }: AddEditItemModalPr
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       onRequestClose={onClose}
     >
@@ -158,7 +165,14 @@ const AddEditItemModal = ({ visible, item, onClose, onSave }: AddEditItemModalPr
 
             <TouchableOpacity style={styles.imageUpload} onPress={pickImage}>
               {imageUrl ? (
-                <Image source={{ uri: imageUrl }} style={styles.previewImage} />
+                <>
+                  <Image 
+                    source={{ uri: imageUrl }} 
+                    style={styles.previewImage} 
+                    onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
+                  />
+                  <Text style={styles.smallText}>{imageUrl}</Text>
+                </>
               ) : (
                 <View style={styles.uploadPlaceholder}>
                   <Ionicons name="camera" size={24} color="#666" />
@@ -319,6 +333,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  smallText: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 4,
+    width: 200,
   },
 });
 

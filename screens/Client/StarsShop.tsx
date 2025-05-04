@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { ShopItem } from '../../types/interfaces';
 import { fetchShopItems } from '../../services/shopService';
+import { supabase } from '../../supabase';
 
 interface StarsShopProps {
   userStars: number;
@@ -56,10 +57,20 @@ const PurchaseConfirmationModal = ({ visible, item, onClose }: PurchaseConfirmat
 const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
   const [items, setItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<any>(null);
   const [purchaseConfirmation, setPurchaseConfirmation] = useState<{
     visible: boolean;
     item: ShopItem | null;
   }>({ visible: false, item: null });
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+    };
+    
+    getSession();
+  }, []);
 
   useEffect(() => {
     loadItems();
@@ -103,6 +114,28 @@ const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
     );
   };
 
+  const fetchImage = async (imageUrl: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(imageUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch image');
+      
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.error('Error fetching image:', error);
+      return null;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Image
@@ -117,8 +150,12 @@ const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
           data={items}
           renderItem={({ item }) => (
             <View style={styles.itemCard}>
-              {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={styles.itemImage} />
+              {item.image ? (
+                <Image 
+                  source={{ uri: item.image }} 
+                  style={styles.itemImage}
+                  resizeMode="cover"
+                />
               ) : (
                 <View style={styles.placeholderImage}>
                   <Ionicons name="gift-outline" size={50} color="#ccc" />

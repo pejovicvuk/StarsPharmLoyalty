@@ -16,14 +16,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.StarsPharmLoyalty",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "newArchEnabled": false
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "newArchEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"

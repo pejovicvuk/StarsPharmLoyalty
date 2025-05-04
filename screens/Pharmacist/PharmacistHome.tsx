@@ -32,8 +32,6 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
       {/* Custom header that matches the design */}
       <Header 
         title="Farmaceut" 
-        rightButtonText="Nazad na odabir uloge"
-        rightButtonAction={onLogout}
       />
 
       {showShopManagement ? (
@@ -74,7 +72,21 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
             </TouchableOpacity>
           </View>
 
-     
+          {/* Logout Section */}
+          <View style={styles.card}>
+            <View style={styles.titleWithIcon}>
+              <Ionicons name="log-out-outline" size={20} color="#FF6B6B" />
+              <Text style={styles.cardTitle}>Odjava</Text>
+            </View>
+            <Text style={styles.cardSubtitle}>Odjavite se sa vašeg naloga.</Text>
+            
+            <TouchableOpacity 
+              style={styles.logoutButton}
+              onPress={onLogout}
+            >
+              <Text style={styles.logoutButtonText}>Odjavi se</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       )}
     </View>
@@ -100,16 +112,16 @@ const styles = StyleSheet.create({
     color: '#8BC8A3',
   },
   logoutButton: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFE5E5',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 5,
   },
   logoutButtonText: {
-    fontSize: 12,
-    color: '#333',
+    color: '#FF6B6B',
+    fontWeight: '500',
+    fontSize: 14,
   },
   scrollContainer: {
     padding: 15,
