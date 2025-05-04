@@ -8,8 +8,9 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Modal,
+  Platform,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Header from '../../components/Header';
 import { supabase } from '../../supabase';
@@ -19,15 +20,15 @@ interface ProfileSettingsProps {
   clientDetails: ClientModel;
   onBack: () => void;
   onUpdate: () => void;
+  starsCount?: number;
 }
 
-const ProfileSettings = ({ clientDetails, onBack, onUpdate }: ProfileSettingsProps) => {
+const ProfileSettings = ({ clientDetails, onBack, onUpdate, starsCount }: ProfileSettingsProps) => {
   const [phone, setPhone] = useState(clientDetails.phone);
-  const [gender, setGender] = useState(clientDetails.gender);
   const [dateOfBirth, setDateOfBirth] = useState(new Date(clientDetails.date_of_birth));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date(clientDetails.date_of_birth));
 
   const formatDate = (date: Date) => {
     return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}.`;
@@ -48,7 +49,6 @@ const ProfileSettings = ({ clientDetails, onBack, onUpdate }: ProfileSettingsPro
         .from('clients')
         .update({
           phone: phone,
-          gender: gender,
           date_of_birth: dateOfBirth.toISOString(),
         })
         .eq('id', clientDetails.id);
@@ -70,9 +70,11 @@ const ProfileSettings = ({ clientDetails, onBack, onUpdate }: ProfileSettingsPro
     <View style={styles.container}>
       <Header
         title="Podešavanja Profila"
-        rightButtonText="Nazad"
-        rightButtonAction={onBack}
+        showBackButton={true}
+        onBackPress={onBack}
+        starsCount={starsCount}
       />
+      
       <ScrollView style={styles.content}>
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Telefon</Text>
@@ -89,32 +91,6 @@ const ProfileSettings = ({ clientDetails, onBack, onUpdate }: ProfileSettingsPro
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Pol</Text>
-          <TouchableOpacity 
-            style={styles.input}
-            onPress={() => setShowGenderPicker(true)}
-          >
-            <Text style={styles.pickerValue}>{gender || 'Izaberite pol'}</Text>
-          </TouchableOpacity>
-          
-          {showGenderPicker && (
-            <View style={styles.modalContainer}>
-              <Picker
-                selectedValue={gender}
-                onValueChange={(itemValue) => {
-                  setGender(itemValue);
-                  setShowGenderPicker(false);
-                }}
-                style={styles.picker}
-              >
-                <Picker.Item label="Muški" value="muški" />
-                <Picker.Item label="Ženski" value="ženski" />
-              </Picker>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.inputContainer}>
           <Text style={styles.label}>Datum Rođenja</Text>
           <TouchableOpacity
             style={styles.input}
@@ -124,31 +100,79 @@ const ProfileSettings = ({ clientDetails, onBack, onUpdate }: ProfileSettingsPro
           </TouchableOpacity>
 
           {showDatePicker && (
-            <DateTimePicker
-              value={dateOfBirth}
-              mode="date"
-              display="default"
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) {
-                  setDateOfBirth(selectedDate);
-                }
-              }}
-            />
+            Platform.OS === 'ios' ? (
+              <Modal
+                transparent={true}
+                animationType="fade"
+                visible={showDatePicker}
+              >
+                <View style={styles.modalOverlay}>
+                  <View style={styles.datePickerContainer}>
+                    <View style={styles.datePickerHeader}>
+                      <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                        <Text style={styles.datePickerButtonText}>Otkaži</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setDateOfBirth(tempDate);
+                          setShowDatePicker(false);
+                        }}
+                      >
+                        <Text style={[styles.datePickerButtonText, styles.confirmButton]}>Potvrdi</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DateTimePicker
+                      value={tempDate}
+                      mode="date"
+                      display="spinner"
+                      onChange={(event, selectedDate) => {
+                        if (selectedDate) {
+                          setTempDate(selectedDate);
+                        }
+                      }}
+                      maximumDate={new Date()}
+                    />
+                  </View>
+                </View>
+              </Modal>
+            ) : (
+              <DateTimePicker
+                value={dateOfBirth}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    setDateOfBirth(selectedDate);
+                  }
+                }}
+                maximumDate={new Date()}
+              />
+            )
           )}
         </View>
 
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSave}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>Sačuvaj Promene</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Sačuvaj Promene</Text>
+            )}
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={onBack}
+            disabled={isLoading}
+          >
+            <Text style={styles.cancelButtonText}>Odustani</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -176,34 +200,31 @@ const styles = StyleSheet.create({
     padding: 15,
     fontSize: 16,
   },
-  picker: {
-    height: 50,
+  buttonContainer: {
+    marginTop: 10,
   },
   saveButton: {
     backgroundColor: '#8BC8A3',
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
-    marginTop: 20,
+    marginBottom: 10,
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  pickerValue: {
-    fontSize: 16,
-    color: '#333',
+  cancelButton: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 15,
+    alignItems: 'center',
   },
-  modalContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderColor: '#E8E8E8',
-    zIndex: 1000,
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
   },
   phoneInputContainer: {
     flexDirection: 'row',
@@ -220,6 +241,40 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 0,
     backgroundColor: 'transparent',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  datePickerContainer: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    paddingBottom: 20,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+    color: '#8BC8A3',
+    paddingHorizontal: 10,
+  },
+  confirmButton: {
+    fontWeight: '600',
   },
 });
 

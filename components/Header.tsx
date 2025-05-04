@@ -9,6 +9,7 @@ interface HeaderProps {
   rightButtonAction?: () => void;
   rightButtonIcon?: string;
   rightButtonText?: string;
+  starsCount?: number;
 }
  
 const Header = ({ 
@@ -17,7 +18,8 @@ const Header = ({
   showBackButton = false,
   rightButtonAction,
   rightButtonIcon,
-  rightButtonText
+  rightButtonText,
+  starsCount
 }: HeaderProps) => {
   const statusBarHeight = StatusBar.currentHeight || 0;
   
@@ -33,17 +35,26 @@ const Header = ({
           )}
         </View>
         
-        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        </View>
         
         <View style={styles.rightContainer}>
-          {rightButtonAction && (rightButtonIcon || rightButtonText) && (
+          {rightButtonAction && (
             <TouchableOpacity onPress={rightButtonAction} style={styles.rightButton}>
               {rightButtonIcon ? (
                 <Ionicons name={rightButtonIcon as any} size={24} color="#ffffff" />
-              ) : (
-                <Text style={styles.rightButtonText} numberOfLines={1}>{rightButtonText}</Text>
-              )}
+              ) : rightButtonText ? (
+                <Text style={styles.rightButtonText}>{rightButtonText}</Text>
+              ) : null}
             </TouchableOpacity>
+          )}
+          
+          {starsCount !== undefined && (
+            <View style={styles.starsCountBadge}>
+              <Ionicons name="star" size={16} color="#E6C34A" />
+              <Text style={styles.starsCountText}>{starsCount}</Text>
+            </View>
           )}
         </View>
       </View>
@@ -59,16 +70,25 @@ const styles = StyleSheet.create({
     height: 60,
     backgroundColor: '#8BC8A3',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 15,
   },
   leftContainer: {
-    width: 40,
+    position: 'absolute',
+    left: 15,
+    zIndex: 1,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rightContainer: {
-    minWidth: 80,
-    alignItems: 'flex-end',
+    position: 'absolute',
+    right: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 1,
   },
   iconButton: {
     padding: 8,
@@ -86,8 +106,22 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
-    flex: 1,
     textAlign: 'center',
+  },
+  starsCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 15,
+    marginLeft: 8,
+  },
+  starsCountText: {
+    color: '#333',
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginLeft: 4,
   },
 });
 

@@ -7,6 +7,8 @@ import {
   ScrollView,
   Image,
   Alert,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
@@ -75,106 +77,139 @@ const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) =
     }
   };
 
+  // Create a custom right component for the stars count
+  const renderStarsCount = () => (
+    <View style={styles.starsCountContainer}>
+      <Ionicons name="star" size={18} color="#E6C34A" />
+      <Text style={styles.starsCountText}>{loyaltyPoints}</Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <Header 
-        title="StarsPharm Loyalty App" 
-        rightButtonText="Odjavi se"
-        rightButtonAction={onLogout}
-      />
-
       {showSettings && clientDetails ? (
         <ProfileSettings
           clientDetails={clientDetails}
           onBack={() => setShowSettings(false)}
           onUpdate={handleProfileUpdate}
+          starsCount={loyaltyPoints}
         />
       ) : showShop ? (
-        <StarsShop
-          userStars={loyaltyPoints}
-          onBack={() => setShowShop(false)}
-          onPurchase={handlePurchase}
-        />
+        <>
+          <Header 
+            title="Stars Shop"
+            showBackButton={true}
+            onBackPress={() => setShowShop(false)}
+            starsCount={loyaltyPoints}
+          />
+          <StarsShop
+            userStars={loyaltyPoints}
+            onBack={() => setShowShop(false)}
+            onPurchase={handlePurchase}
+          />
+        </>
       ) : (
-        <ScrollView style={styles.scrollContainer}>
-          {/* Loyalty Card Section with QR Code */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}> Vaša Kartica Lojalnosti</Text>
-            <Text style={[styles.cardSubtitle, styles.clientName]}>
-              {user.name} {user.surname}
-            </Text>
-            
-            <View style={styles.qrContainer}>
-              <UserQRCode userId={user.userId} size={180} />
-            </View>
-            
-            <Text style={styles.cardCaption}>
-              Pokažite ovaj kod farmaceutu za skupljanje poena.
-            </Text>
-          </View>
-
-          {/* Stars Balance Section */}
-          <View style={styles.card}>
-            <View style={styles.titleWithIcon}>
-              <Ionicons name="star" size={20} color="#E6C34A" />
-              <Text style={styles.cardTitle}>Vaši Stars Poeni</Text>
-            </View>
-            
-            <Text style={styles.pointsText}>{loyaltyPoints}</Text>
-            <Text style={styles.cardSubtitle}>Skupljajte poene pri svakoj kupovini!</Text>
-            
-            <TouchableOpacity 
-              style={styles.buttonOutline}
-              onPress={() => setShowShop(true)}
-            >
-              <View style={styles.buttonContent}>
-                <Ionicons name="cart-outline" size={20} color="#8BC8A3" style={styles.buttonIcon} />
-                <Text style={styles.buttonOutlineText}>Pregledaj Stars Prodavnicu</Text>
+        <>
+          <Header 
+            title="StarsPharm Loyalty"
+            starsCount={loyaltyPoints}
+          />
+          <ScrollView style={styles.scrollContainer}>
+            {/* Loyalty Card Section with QR Code */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}> Vaša Kartica Lojalnosti</Text>
+              <Text style={[styles.cardSubtitle, styles.clientName]}>
+                {user.name} {user.surname}
+              </Text>
+              
+              <View style={styles.qrContainer}>
+                <UserQRCode userId={user.userId} size={180} />
               </View>
-            </TouchableOpacity>
-          </View>
+              
+              <Text style={styles.cardCaption}>
+                Pokažite ovaj kod farmaceutu za skupljanje poena.
+              </Text>
+            </View>
 
-          {/* Client Details Section */}
-          {clientDetails && (
+            {/* Stars Balance Section */}
             <View style={styles.card}>
               <View style={styles.titleWithIcon}>
-                <Ionicons name="information-circle-outline" size={20} color="#8BC8A3" />
-                <Text style={styles.cardTitle}>Vaši Podaci</Text>
+                <Ionicons name="star" size={20} color="#E6C34A" />
+                <Text style={styles.cardTitle}>Vaši Stars Poeni</Text>
               </View>
               
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Godine:</Text>
-                <Text style={styles.detailValue}>{clientDetails.date_of_birth}</Text>
-              </View>
+              <Text style={styles.pointsText}>{loyaltyPoints}</Text>
+              <Text style={styles.cardSubtitle}>Skupljajte poene pri svakoj kupovini!</Text>
               
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Pol:</Text>
-                <Text style={styles.detailValue}>{clientDetails.gender}</Text>
-              </View>
-              
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Telefon:</Text>
-                <Text style={styles.detailValue}>{clientDetails.phone}</Text>
-              </View>
+              <TouchableOpacity 
+                style={styles.buttonOutline}
+                onPress={() => setShowShop(true)}
+              >
+                <View style={styles.buttonContent}>
+                  <Ionicons name="cart-outline" size={20} color="#8BC8A3" style={styles.buttonIcon} />
+                  <Text style={styles.buttonOutlineText}>Pregledaj Stars Prodavnicu</Text>
+                </View>
+              </TouchableOpacity>
             </View>
-          )}
 
-          {/* Edit Profile Section */}
-          <View style={styles.card}>
-            <View style={styles.titleWithIcon}>
-              <Ionicons name="person-circle-outline" size={20} color="#8BC8A3" />
-              <Text style={styles.cardTitle}>Uredi Profil</Text>
+            {/* Client Details Section */}
+            {clientDetails && (
+              <View style={styles.card}>
+                <View style={styles.titleWithIcon}>
+                  <Ionicons name="information-circle-outline" size={20} color="#8BC8A3" />
+                  <Text style={styles.cardTitle}>Vaši Podaci</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Godine:</Text>
+                  <Text style={styles.detailValue}>{clientDetails.date_of_birth}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Pol:</Text>
+                  <Text style={styles.detailValue}>{clientDetails.gender}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Telefon:</Text>
+                  <Text style={styles.detailValue}>{clientDetails.phone}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Edit Profile Section */}
+            <View style={styles.card}>
+              <View style={styles.titleWithIcon}>
+                <Ionicons name="person-circle-outline" size={20} color="#8BC8A3" />
+                <Text style={styles.cardTitle}>Uredi Profil</Text>
+              </View>
+              <Text style={styles.cardSubtitle}>Ažurirajte vaše lične podatke.</Text>
+              
+              <TouchableOpacity 
+                style={styles.buttonFilled}
+                onPress={() => setShowSettings(true)}
+              >
+                <Text style={styles.buttonFilledText}>Podešavanja Profila</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.cardSubtitle}>Ažurirajte vaše lične podatke.</Text>
             
-            <TouchableOpacity 
-              style={styles.buttonFilled}
-              onPress={() => setShowSettings(true)}
-            >
-              <Text style={styles.buttonFilledText}>Podešavanja Profila</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+            {/* Logout Section */}
+            <View style={styles.card}>
+              <View style={styles.titleWithIcon}>
+                <Ionicons name="log-out-outline" size={20} color="#FF6B6B" />
+                <Text style={styles.cardTitle}>Odjava</Text>
+              </View>
+              <Text style={styles.cardSubtitle}>Odjavite se sa vašeg naloga.</Text>
+              
+              <TouchableOpacity 
+                style={styles.logoutButton}
+                onPress={onLogout}
+              >
+                <Text style={styles.logoutButtonText}>Odjavi se</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </>
       )}
     </View>
   );
@@ -330,6 +365,31 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     marginRight: 8,
+  },
+  logoutButton: {
+    backgroundColor: '#FFE5E5',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  logoutButtonText: {
+    color: '#FF6B6B',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  starsCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+  },
+  starsCountText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginLeft: 5,
   },
 });
 

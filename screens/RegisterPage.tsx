@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -232,44 +233,55 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
               </TouchableOpacity>
               
               {showDatePicker && (
-                <View style={styles.datePickerContainer}>
-                  {Platform.OS === 'ios' && (
-                    <View style={styles.datePickerHeader}>
-                      <TouchableOpacity 
-                        onPress={() => setShowDatePicker(false)}
-                      >
-                        <Text style={styles.datePickerButtonText}>Otkaži</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        onPress={() => {
-                          setDateOfBirth(tempDate);
-                          setShowDatePicker(false);
-                        }}
-                      >
-                        <Text style={[styles.datePickerButtonText, styles.confirmButton]}>OK</Text>
-                      </TouchableOpacity>
+                Platform.OS === 'ios' ? (
+                  <Modal
+                    transparent={true}
+                    animationType="fade"
+                    visible={showDatePicker}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.datePickerContainer}>
+                        <View style={styles.datePickerHeader}>
+                          <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                            <Text style={styles.datePickerButtonText}>Otkaži</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            onPress={() => {
+                              setDateOfBirth(tempDate);
+                              setShowDatePicker(false);
+                            }}
+                          >
+                            <Text style={[styles.datePickerButtonText, styles.confirmButton]}>Potvrdi</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <DateTimePicker
+                          value={tempDate}
+                          mode="date"
+                          display="spinner"
+                          onChange={(event, selectedDate) => {
+                            if (selectedDate) {
+                              setTempDate(selectedDate);
+                            }
+                          }}
+                          maximumDate={new Date()}
+                        />
+                      </View>
                     </View>
-                  )}
+                  </Modal>
+                ) : (
                   <DateTimePicker
-                    testID="dateTimePicker"
-                    value={Platform.OS === 'ios' ? tempDate : dateOfBirth}
+                    value={dateOfBirth}
                     mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    display="default"
                     onChange={(event, selectedDate) => {
-                      if (Platform.OS === 'android') {
-                        setShowDatePicker(false);
-                        if (selectedDate) {
-                          setDateOfBirth(selectedDate);
-                        }
-                      } else {
-                        if (selectedDate) {
-                          setTempDate(selectedDate);
-                        }
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        setDateOfBirth(selectedDate);
                       }
                     }}
                     maximumDate={new Date()}
                   />
-                </View>
+                )
               )}
             </View>
             
@@ -285,20 +297,26 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
               </TouchableOpacity>
               
               {showGenderPicker && (
-                <View style={styles.modalContainer}>
-                  <Picker
-                    selectedValue={gender}
-                    onValueChange={(itemValue) => {
-                      setGender(itemValue);
-                      setShowGenderPicker(false);
-                    }}
-                    style={styles.picker}
-                  >
-                    <Picker.Item label="Izaberite pol" value="" />
-                    <Picker.Item label="Muški" value="muški" />
-                    <Picker.Item label="Ženski" value="ženski" />
-                  </Picker>
-                </View>
+                <Modal
+                  transparent={true}
+                  animationType="none"
+                  visible={showGenderPicker}
+                >
+                  <View style={styles.modalContainer}>
+                    <Picker
+                      selectedValue={gender}
+                      onValueChange={(itemValue) => {
+                        setGender(itemValue);
+                        setShowGenderPicker(false);
+                      }}
+                      style={styles.picker}
+                    >
+                      <Picker.Item label="Izaberite pol" value="" />
+                      <Picker.Item label="Muški" value="muški" />
+                      <Picker.Item label="Ženski" value="ženski" />
+                    </Picker>
+                  </View>
+                </Modal>
               )}
             </View>
             
@@ -504,14 +522,16 @@ const styles = StyleSheet.create({
     maxHeight: 200,
   },
   datePickerContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: 'white',
-    zIndex: 1000,
-    borderTopWidth: 1,
-    borderColor: '#E8E8E8',
+    borderRadius: 10,
+    paddingBottom: 20,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   datePickerHeader: {
     flexDirection: 'row',
@@ -521,6 +541,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
     borderBottomWidth: 1,
     borderColor: '#E8E8E8',
+    borderRadius: 10,
   },
   datePickerButtonText: {
     fontSize: 16,
@@ -529,6 +550,24 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  pickerModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    paddingBottom: 20,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
 

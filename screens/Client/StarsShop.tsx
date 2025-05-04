@@ -13,7 +13,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { ShopItem } from '../../types/interfaces';
 import { fetchShopItems } from '../../services/shopService';
-import Header from '../../components/Header';
 
 interface StarsShopProps {
   userStars: number;
@@ -76,6 +75,7 @@ const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
       setLoading(false);
     }
   };
+
   const handlePurchase = async (item: ShopItem) => {
     if (userStars < item.star_price) {
       Alert.alert('Nedovoljno poena', 'Nemate dovoljno Stars poena za ovaj artikal.');
@@ -109,17 +109,7 @@ const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
         source={require('../../assets/starsPharmLogo.png')}
         style={styles.backgroundLogo}
       />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#4A9B7F" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Apoteka StarsPharm</Text>
-        <View style={styles.starsContainer}>
-          <Ionicons name="star" size={20} color="#E6C34A" />
-          <Text style={styles.starsText}>{userStars}</Text>
-        </View>
-      </View>
-
+      
       {loading ? (
         <ActivityIndicator size="large" color="#4A9B7F" style={styles.loader} />
       ) : (
@@ -176,41 +166,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#4A9B7F',
-    textAlign: 'center',
-  },
-  backButton: {
-    padding: 8,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    padding: 8,
-    borderRadius: 20,
-  },
-  starsText: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginLeft: 6,
-    color: '#2C3E50',
+  backgroundLogo: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    opacity: 0.05,
+    resizeMode: 'contain',
+    alignSelf: 'center',
   },
   listContainer: {
     padding: 16,
@@ -343,14 +305,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
-  },
-  backgroundLogo: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    opacity: 0.05,
-    resizeMode: 'contain',
-    alignSelf: 'center',
   },
 });
 
