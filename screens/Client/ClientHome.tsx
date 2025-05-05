@@ -64,9 +64,10 @@ const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) =
           event: 'UPDATE',
           schema: 'public',
           table: 'clients',
-          filter: `id=eq.${user.userId}`,
+          filter: `user_id=eq.${user.userId}`,
         },
         (payload) => {
+          console.log('Received real-time update:', payload); // Add this for debugging
           // Update the stars count when changes are detected
           if (payload.new && payload.new.stars !== undefined) {
             setLoyaltyPoints(payload.new.stars);
@@ -76,7 +77,9 @@ const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) =
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
 
     // Clean up subscription on component unmount
     return () => {
