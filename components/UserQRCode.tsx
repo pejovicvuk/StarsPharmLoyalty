@@ -8,12 +8,8 @@ interface UserQRCodeProps {
 }
 
 const UserQRCode = ({ userId, size = 200 }: UserQRCodeProps) => {
-  // Create a QR code value that includes user ID and timestamp for uniqueness
-  const qrValue = JSON.stringify({
-    userId,
-    timestamp: Date.now(),
-    type: 'starspharm_client'
-  });
+  // Create a compact QR code value
+  const qrValue = JSON.stringify({u:userId,t:Date.now(),y:'c'}); // Minimized JSON keys
 
   return (
     <View style={styles.container}>
@@ -21,6 +17,13 @@ const UserQRCode = ({ userId, size = 200 }: UserQRCodeProps) => {
         value={qrValue}
         size={size}
         color="#4A9B7F"
+        logo={require('../assets/icon.png')}
+        logoSize={size * 0.25}
+        logoBackgroundColor="white"
+        logoBorderRadius={10}
+        logoMargin={5}
+        ecl="H"
+        quietZone={10}
       />
     </View>
   );
