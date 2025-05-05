@@ -54,6 +54,34 @@ const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) =
     };
     
     fetchClientData();
+    
+    // Set up real-time subscription for stars updates
+    const subscription = supabase
+      .channel('clients-stars-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'clients',
+          filter: `id=eq.${user.userId}`,
+        },
+        (payload) => {
+          // Update the stars count when changes are detected
+          if (payload.new && payload.new.stars !== undefined) {
+            setLoyaltyPoints(payload.new.stars);
+            setClientDetails(prevDetails => 
+              prevDetails ? { ...prevDetails, stars: payload.new.stars } : null
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Clean up subscription on component unmount
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [user.userId]);
 
   const handleProfileUpdate = async () => {
