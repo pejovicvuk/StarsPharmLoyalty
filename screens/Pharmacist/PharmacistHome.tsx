@@ -98,7 +98,7 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
       const scannedData = JSON.parse(data);
       console.log('Scanned data:', scannedData);
       
-      setScannedUserId(scannedData.userId);
+      setScannedUserId(scannedData.u);
       setShowScanner(false);
       setShowStarsModal(true);
     } catch (error) {
