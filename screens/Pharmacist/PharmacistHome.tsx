@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,16 +7,22 @@ import {
   ScrollView,
   StatusBar,
   Platform,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import ShopManagement from './ShopManagement';
+import { Camera, CameraView } from 'expo-camera';
+import { supabase } from '../../supabase';
 
 interface PharmacistHomeProps {
   user: {
     name: string;
     surname: string;
     userId: string;
+    role: string;
   };
   onLogout: () => void;
 }
@@ -24,6 +30,86 @@ interface PharmacistHomeProps {
 const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
   const statusBarHeight = StatusBar.currentHeight || 0;
   const [showShopManagement, setShowShopManagement] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [showStarsModal, setShowStarsModal] = useState(false);
+  const [starsToAdd, setStarsToAdd] = useState('');
+  const [scannedUserId, setScannedUserId] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScannedRef = useRef<string | null>(null);
+
+  const requestCameraPermission = async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    setHasPermission(status === 'granted');
+    lastScannedRef.current = null;
+  };
+
+  const handleAddStars = async () => {
+    if (!scannedUserId || !starsToAdd || isNaN(Number(starsToAdd))) {
+      Alert.alert('Greška', 'Molimo unesite validan broj zvezdica.');
+      return;
+    }
+
+    try {
+      // First, get current stars
+      const { data: currentData, error: fetchError } = await supabase
+        .from('clients')
+        .select('stars')
+        .eq('user_id', scannedUserId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentStars = currentData?.stars || 0;
+      const newStars = currentStars + Number(starsToAdd);
+
+      // Update stars in database
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({ stars: newStars })
+        .eq('user_id', scannedUserId);
+
+      if (updateError) throw updateError;
+
+      Alert.alert('Uspeh', `Uspešno ste dodali ${starsToAdd} zvezdica korisniku.`);
+      setShowStarsModal(false);
+      setStarsToAdd('');
+      setScannedUserId(null);
+    } catch (error) {
+      console.error('Error updating stars:', error);
+      Alert.alert('Greška', 'Došlo je do greške prilikom dodavanja zvezdica.');
+    }
+  };
+
+  const handleBarCodeScanned = useCallback(({ type, data }: { type: string; data: string }) => {
+    // Prevent multiple scans of the same code within 2 seconds
+    if (lastScannedRef.current === data) {
+      return;
+    }
+
+    // Clear any existing timeout
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+
+    lastScannedRef.current = data;
+
+    try {
+      const scannedData = JSON.parse(data);
+      console.log('Scanned data:', scannedData);
+      
+      setScannedUserId(scannedData.userId);
+      setShowScanner(false);
+      setShowStarsModal(true);
+    } catch (error) {
+      console.error('Error parsing QR code data:', error);
+      Alert.alert('Nevažeći QR kod');
+      // Reset last scanned after 2 seconds to allow new scan attempts
+      scanTimeoutRef.current = setTimeout(() => {
+        lastScannedRef.current = null;
+      }, 2000);
+    }
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -44,17 +130,20 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
               <Ionicons name="qr-code-outline" size={20} color="#4A9B7F" />
               <Text style={styles.cardTitle}>Skeniraj Kodove</Text>
             </View>
-            <Text style={styles.cardSubtitle}>Skenirajte QR kod klijenta i fiskalni račun.</Text>
-            
-            <TouchableOpacity style={styles.buttonGreen}>
-              <Text style={styles.buttonGreenText}>Otvori Skener (WIP)</Text>
-            </TouchableOpacity>
-            
-            <Text style={styles.noteText}>
-              Funkcionalnost skenera će biti dodata kasnije.
+            <Text style={styles.cardSubtitle}>
+              Skenirajte QR kod klijenta i fiskalni račun.
             </Text>
+            
+            <TouchableOpacity 
+              style={styles.buttonGreen}
+              onPress={() => {
+                requestCameraPermission();
+                setShowScanner(true);
+              }}
+            >
+              <Text style={styles.buttonGreenText}>Otvori Skener</Text>
+            </TouchableOpacity>
           </View>
-
 
           {/* Manage Stars Shop Section */}
           <View style={styles.card}>
@@ -89,6 +178,75 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
           </View>
         </ScrollView>
       )}
+
+      {/* Scanner Modal */}
+      <Modal
+        visible={showScanner}
+        animationType="slide"
+        onRequestClose={() => setShowScanner(false)}
+      >
+        <View style={styles.scannerContainer}>
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={() => setShowScanner(false)}
+          >
+            <Ionicons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          
+          {hasPermission === null ? (
+            <Text>Requesting camera permission</Text>
+          ) : hasPermission === false ? (
+            <Text>No access to camera</Text>
+          ) : (
+            <CameraView
+              style={StyleSheet.absoluteFillObject}
+              barcodeScannerSettings={{
+                barcodeTypes: ["qr"],
+              }}
+              onBarcodeScanned={handleBarCodeScanned}
+            />
+          )}
+        </View>
+      </Modal>
+
+      {/* Stars Addition Modal */}
+      <Modal
+        visible={showStarsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowStarsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Dodaj Stars Poene</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Unesite broj zvezdica"
+              keyboardType="numeric"
+              value={starsToAdd}
+              onChangeText={setStarsToAdd}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowStarsModal(false);
+                  setStarsToAdd('');
+                  setScannedUserId(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Otkaži</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={handleAddStars}
+              >
+                <Text style={styles.confirmButtonText}>Dodaj</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -195,6 +353,70 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '500',
     fontSize: 14,
+  },
+  scannerContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4A9B7F',
+    marginBottom: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    width: '100%',
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButton: {
+    borderRadius: 8,
+    padding: 12,
+    width: '45%',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#FFE5E5',
+  },
+  confirmButton: {
+    backgroundColor: '#4A9B7F',
+  },
+  cancelButtonText: {
+    color: '#FF6B6B',
+    fontWeight: '500',
+  },
+  confirmButtonText: {
+    color: 'white',
+    fontWeight: '500',
   },
 });
 
