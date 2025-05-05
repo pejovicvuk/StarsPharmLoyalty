@@ -65,7 +65,6 @@ const AddEditItemModal = ({ visible, item, onClose, onSave }: AddEditItemModalPr
         return;
       }
       
-      // Use fullscreen presentation style to fix iOS 12 crash
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -79,26 +78,37 @@ const AddEditItemModal = ({ visible, item, onClose, onSave }: AddEditItemModalPr
         try {
           const localUri = result.assets[0].uri;
           
-          // First, fetch the image data
-          const response = await fetch(localUri);
-          const blob = await response.blob();
-          
+          // Get the file extension
+          const fileExt = localUri.split('.').pop();
           // Create a unique filename
-          const filename = `shop-item-${Date.now()}.jpg`;
+          const fileName = `shop-item-${Date.now()}.${fileExt}`;
           
-          // Upload to Supabase storage
+          // Convert the image to base64 first
+          const base64 = await FileSystem.readAsStringAsync(localUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          
+          // Use decode from base64-arraybuffer
+          const arrayBuffer = decode(base64);
+          
+          // Upload to Supabase storage with explicit content type
           const { data, error } = await supabase.storage
             .from('shop-items')
-            .upload(filename, blob);
+            .upload(fileName, arrayBuffer, {
+              contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`,
+              cacheControl: '3600',
+            });
             
           if (error) throw error;
           
           // Get the public URL
           const { data: publicUrlData } = supabase.storage
             .from('shop-items')
-            .getPublicUrl(filename);
+            .getPublicUrl(fileName);
             
-          // Save the public URL, not the local URI
+          console.log('Public URL:', publicUrlData.publicUrl);
+          
+          // Save the public URL
           setImageUrl(publicUrlData.publicUrl);
           Alert.alert('Uspeh', 'Slika je uspešno otpremljena.');
         } catch (error) {

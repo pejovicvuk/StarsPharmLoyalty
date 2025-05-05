@@ -65,8 +65,8 @@ const ShopManagement = ({ onBack }: ShopManagementProps) => {
 
   const renderItem = ({ item }: { item: ShopItem }) => (
     <View style={styles.itemCard}>
-      {item.image_url && (
-        <Image source={{ uri: item.image_url }} style={styles.itemImage} />
+      {item.image && (
+        <Image source={{ uri: item.image }} style={styles.itemImage} />
       )}
       <View style={styles.itemInfo}>
         <Text style={styles.itemName}>{item.item_name}</Text>
