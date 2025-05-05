@@ -17,7 +17,7 @@ const UserQRCode = ({ userId, size = 200 }: UserQRCodeProps) => {
         value={qrValue}
         size={size}
         color="#4A9B7F"
-        logo={require('../assets/icon.png')}
+        logo={require('../assets/starspharm_circular_transparent.png')}
         logoSize={size * 0.25}
         logoBackgroundColor="white"
         logoBorderRadius={10}
