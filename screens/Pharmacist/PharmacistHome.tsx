@@ -16,6 +16,7 @@ import Header from '../../components/Header';
 import ShopManagement from './ShopManagement';
 import { Camera, CameraView } from 'expo-camera';
 import { supabase } from '../../supabase';
+import receiptScanner from '../../services/receiptScanner';
 
 interface PharmacistHomeProps {
   user: {
@@ -31,8 +32,7 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
   const statusBarHeight = StatusBar.currentHeight || 0;
   const [showShopManagement, setShowShopManagement] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [showStarsModal, setShowStarsModal] = useState(false);
-  const [starsToAdd, setStarsToAdd] = useState('');
+  const [showReceiptScanner, setShowReceiptScanner] = useState(false);
   const [scannedUserId, setScannedUserId] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -42,43 +42,6 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
     const { status } = await Camera.requestCameraPermissionsAsync();
     setHasPermission(status === 'granted');
     lastScannedRef.current = null;
-  };
-
-  const handleAddStars = async () => {
-    if (!scannedUserId || !starsToAdd || isNaN(Number(starsToAdd))) {
-      Alert.alert('Greška', 'Molimo unesite validan broj zvezdica.');
-      return;
-    }
-
-    try {
-      // First, get current stars
-      const { data: currentData, error: fetchError } = await supabase
-        .from('clients')
-        .select('stars')
-        .eq('user_id', scannedUserId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      const currentStars = currentData?.stars || 0;
-      const newStars = currentStars + Number(starsToAdd);
-
-      // Update stars in database
-      const { error: updateError } = await supabase
-        .from('clients')
-        .update({ stars: newStars })
-        .eq('user_id', scannedUserId);
-
-      if (updateError) throw updateError;
-
-      Alert.alert('Uspeh', `Uspešno ste dodali ${starsToAdd} zvezdica korisniku.`);
-      setShowStarsModal(false);
-      setStarsToAdd('');
-      setScannedUserId(null);
-    } catch (error) {
-      console.error('Error updating stars:', error);
-      Alert.alert('Greška', 'Došlo je do greške prilikom dodavanja zvezdica.');
-    }
   };
 
   const handleBarCodeScanned = useCallback(({ type, data }: { type: string; data: string }) => {
@@ -100,7 +63,7 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
       
       setScannedUserId(scannedData.u);
       setShowScanner(false);
-      setShowStarsModal(true);
+      setShowReceiptScanner(true);
     } catch (error) {
       console.error('Error parsing QR code data:', error);
       Alert.alert('Nevažeći QR kod');
@@ -110,6 +73,52 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
       }, 2000);
     }
   }, []);
+
+  const handleReceiptScanned = useCallback(({ type, data }: { type: string; data: string }) => {
+    // Prevent multiple scans of the same code within 2 seconds
+    if (lastScannedRef.current === data) {
+      return;
+    }
+
+    // Clear any existing timeout
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+
+    lastScannedRef.current = data;
+
+    try {
+      console.log('Scanned receipt URL:', data);
+      
+      // Call the receipt scanner service with the scanned URL and user ID
+      if (scannedUserId) {
+        receiptScanner.processReceiptScan(data, scannedUserId)
+          .then(result => {
+            if (result.success) {
+              Alert.alert('Uspeh', 'Račun je uspešno skeniran.');
+            } else {
+              Alert.alert('Greška', result.message || 'Došlo je do greške prilikom skeniranja računa.');
+            }
+          })
+          .catch(error => {
+            console.error('Error processing receipt:', error);
+            Alert.alert('Greška', 'Došlo je do greške prilikom obrade računa.');
+          });
+      } else {
+        Alert.alert('Greška', 'Korisnik nije identifikovan.');
+      }
+      
+      setShowReceiptScanner(false);
+      setScannedUserId(null);
+    } catch (error) {
+      console.error('Error scanning receipt:', error);
+      Alert.alert('Greška', 'Došlo je do greške prilikom skeniranja računa.');
+      // Reset last scanned after 2 seconds to allow new scan attempts
+      scanTimeoutRef.current = setTimeout(() => {
+        lastScannedRef.current = null;
+      }, 2000);
+    }
+  }, [scannedUserId]);
 
   return (
     <View style={styles.container}>
@@ -209,42 +218,44 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
         </View>
       </Modal>
 
-      {/* Stars Addition Modal */}
+      {/* Receipt Scanner Modal */}
       <Modal
-        visible={showStarsModal}
+        visible={showReceiptScanner}
         animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowStarsModal(false)}
+        onRequestClose={() => {
+          setShowReceiptScanner(false);
+          setScannedUserId(null);
+        }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Dodaj Stars Poene</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Unesite broj zvezdica"
-              keyboardType="numeric"
-              value={starsToAdd}
-              onChangeText={setStarsToAdd}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowStarsModal(false);
-                  setStarsToAdd('');
-                  setScannedUserId(null);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Otkaži</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={handleAddStars}
-              >
-                <Text style={styles.confirmButtonText}>Dodaj</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.scannerContainer}>
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={() => {
+              setShowReceiptScanner(false);
+              setScannedUserId(null);
+            }}
+          >
+            <Ionicons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          
+          <View style={styles.scannerInstructions}>
+            <Text style={styles.scannerTitle}>Skenirajte fiskalni račun</Text>
+            <Text style={styles.scannerSubtitle}>Postavite QR kod sa računa u okvir</Text>
           </View>
+          
+          {hasPermission === null ? (
+            <Text>Requesting camera permission</Text>
+          ) : hasPermission === false ? (
+            <Text>No access to camera</Text>
+          ) : (
+            <CameraView
+              style={StyleSheet.absoluteFillObject}
+              barcodeScannerSettings={{
+                barcodeTypes: ["qr"],
+              }}
+              onBarcodeScanned={handleReceiptScanned}
+            />
+          )}
         </View>
       </Modal>
     </View>
@@ -365,58 +376,29 @@ const styles = StyleSheet.create({
     zIndex: 1,
     padding: 10,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
+  scannerInstructions: {
+    position: 'absolute',
+    top: 100,
+    left: 0,
+    right: 0,
     alignItems: 'center',
+    zIndex: 1,
   },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    width: '80%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4A9B7F',
-    marginBottom: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-    width: '100%',
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  modalButton: {
-    borderRadius: 8,
-    padding: 12,
-    width: '45%',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#FFE5E5',
-  },
-  confirmButton: {
-    backgroundColor: '#4A9B7F',
-  },
-  cancelButtonText: {
-    color: '#FF6B6B',
-    fontWeight: '500',
-  },
-  confirmButtonText: {
+  scannerTitle: {
     color: 'white',
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  scannerSubtitle: {
+    color: 'white',
+    fontSize: 16,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });
 

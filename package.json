@@ -14,10 +14,13 @@
     "@react-native-picker/picker": "2.11.0",
     "@supabase/supabase-js": "^2.49.4",
     "@tradle/react-native-http": "^2.0.1",
+    "axios": "^1.9.0",
+    "axios-cookiejar-support": "^6.0.2",
     "base64-arraybuffer": "^1.0.2",
     "crypto-browserify": "^3.12.1",
     "dotenv": "^16.5.0",
     "expo": "^53.0.6",
+    "expo-camera": "~16.1.6",
     "expo-checkbox": "~4.0.1",
     "expo-constants": "~17.1.5",
     "expo-dev-client": "~5.1.8",
@@ -40,8 +43,8 @@
     "react-native-websocket": "^1.0.2",
     "stream-browserify": "^3.0.0",
     "tls-browserify": "^0.2.2",
-    "web-streams-polyfill": "^3.2.1",
-    "expo-camera": "~16.1.6"
+    "tough-cookie": "^5.1.2",
+    "web-streams-polyfill": "^3.2.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
