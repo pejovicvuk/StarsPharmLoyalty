@@ -227,7 +227,10 @@ const styles = StyleSheet.create({
   },
   itemImage: {
     width: '100%',
-    height: 200,
+    aspectRatio: 1,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    alignSelf: 'center',
     resizeMode: 'cover',
   },
   placeholderImage: {
