@@ -202,6 +202,11 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
             <Ionicons name="close" size={30} color="#fff" />
           </TouchableOpacity>
           
+          <View style={styles.scannerInstructions}>
+            <Text style={styles.scannerTitle}>Skenirajte QR kod klijenta</Text>
+            <Text style={styles.scannerSubtitle}>Postavite QR kod sa aplikacije klijenta u okvir</Text>
+          </View>
+          
           {hasPermission === null ? (
             <Text>Requesting camera permission</Text>
           ) : hasPermission === false ? (

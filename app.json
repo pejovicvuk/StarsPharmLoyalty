@@ -18,6 +18,12 @@
         {
           "cameraPermission": "Allow StarsPharmLoyalty to access your camera."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow StarsPharmLoyalty to access your photos to select images for articles."
+        }
       ]
     ],
     "ios": {
@@ -33,7 +39,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "newArchEnabled": false
+      "newArchEnabled": false,
+      "package": "com.anonymous.StarsPharmLoyalty"
     },
     "web": {
       "favicon": "./assets/favicon.png"

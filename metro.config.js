@@ -20,7 +20,6 @@ config.resolver.extraNodeModules = {
   os: require.resolve('os-browserify/browser'),
   path: require.resolve('path-browserify'),
   fs: require.resolve('react-native-fs'),
-  net: require.resolve('react-native-tcp'),
 };
 
 module.exports = config; 
