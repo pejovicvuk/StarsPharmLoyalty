@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
@@ -37,6 +38,10 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScannedRef = useRef<string | null>(null);
+  const [manualReceiptUrl, setManualReceiptUrl] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualAmount, setManualAmount] = useState('');
+  const [showManualAmount, setShowManualAmount] = useState(false);
 
   const requestCameraPermission = async () => {
     const { status } = await Camera.requestCameraPermissionsAsync();
@@ -230,38 +235,199 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
         onRequestClose={() => {
           setShowReceiptScanner(false);
           setScannedUserId(null);
+          setManualReceiptUrl('');
+          setShowManualInput(false);
+          setManualAmount('');
+          setShowManualAmount(false);
         }}
       >
-        <View style={styles.scannerContainer}>
-          <TouchableOpacity 
-            style={styles.closeButton}
-            onPress={() => {
-              setShowReceiptScanner(false);
-              setScannedUserId(null);
-            }}
-          >
-            <Ionicons name="close" size={30} color="#fff" />
-          </TouchableOpacity>
-          
-          <View style={styles.scannerInstructions}>
-            <Text style={styles.scannerTitle}>Skenirajte fiskalni račun</Text>
-            <Text style={styles.scannerSubtitle}>Postavite QR kod sa računa u okvir</Text>
-          </View>
-          
-          {hasPermission === null ? (
-            <Text>Requesting camera permission</Text>
-          ) : hasPermission === false ? (
-            <Text>No access to camera</Text>
-          ) : (
-            <CameraView
-              style={StyleSheet.absoluteFillObject}
-              barcodeScannerSettings={{
-                barcodeTypes: ["qr"],
+        <KeyboardAvoidingView
+          style={{ flex: 1, backgroundColor: 'black' }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+        >
+          <View style={{ flex: 1, position: 'relative' }}>
+            {hasPermission === null ? (
+              <Text>Requesting camera permission</Text>
+            ) : hasPermission === false ? (
+              <Text>No access to camera</Text>
+            ) : (
+              <CameraView
+                style={StyleSheet.absoluteFillObject}
+                barcodeScannerSettings={{
+                  barcodeTypes: ["qr"],
+                }}
+                onBarcodeScanned={handleReceiptScanned}
+              />
+            )}
+            {/* Overlay for manual entry */}
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: 'rgba(0,0,0,0.92)',
+                paddingTop: 20,
+                paddingBottom: 30,
+                paddingHorizontal: 20,
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                elevation: 8,
               }}
-              onBarcodeScanned={handleReceiptScanned}
-            />
-          )}
-        </View>
+            >
+              <ScrollView
+                contentContainerStyle={{ paddingBottom: 10 }}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <TouchableOpacity
+                    style={[styles.niceButton, showManualInput && styles.niceButtonActive]}
+                    onPress={() => {
+                      setShowManualInput((v) => !v);
+                      setShowManualAmount(false);
+                    }}
+                  >
+                    <Text style={[styles.niceButtonText, showManualInput && styles.niceButtonTextActive]}>
+                      {showManualInput ? 'Sakrij unos linka' : 'Unesi link ručno'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.niceButton, showManualAmount && styles.niceButtonActive]}
+                    onPress={() => {
+                      setShowManualAmount((v) => !v);
+                      setShowManualInput(false);
+                    }}
+                  >
+                    <Text style={[styles.niceButtonText, showManualAmount && styles.niceButtonTextActive]}>
+                      {showManualAmount ? 'Sakrij unos iznosa' : 'Unesi iznos ručno'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {showManualInput && (
+                  <View style={{ marginTop: 10 }}>
+                    <TextInput
+                      style={{
+                        backgroundColor: '#fff',
+                        borderRadius: 10,
+                        padding: 14,
+                        marginBottom: 12,
+                        color: '#333',
+                        fontSize: 16,
+                        borderWidth: 1,
+                        borderColor: '#e0e0e0',
+                      }}
+                      placeholder="Nalepi link sa računa"
+                      placeholderTextColor="#999"
+                      value={manualReceiptUrl}
+                      onChangeText={setManualReceiptUrl}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                      style={styles.niceButtonPrimary}
+                      onPress={async () => {
+                        if (!manualReceiptUrl) {
+                          Alert.alert('Greška', 'Unesite link sa računa.');
+                          return;
+                        }
+                        if (scannedUserId) {
+                          const result = await receiptScanner.processReceiptScan(manualReceiptUrl, scannedUserId);
+                          if (result.success) {
+                            Alert.alert('Uspeh', 'Račun je uspešno dodat.');
+                          } else {
+                            Alert.alert('Greška', result.message || 'Došlo je do greške.');
+                          }
+                        }
+                        setShowReceiptScanner(false);
+                        setScannedUserId(null);
+                        setManualReceiptUrl('');
+                        setShowManualInput(false);
+                      }}
+                    >
+                      <Text style={styles.niceButtonPrimaryText}>Potvrdi</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {showManualAmount && (
+                  <View style={{ marginTop: 10 }}>
+                    <TextInput
+                      style={{
+                        backgroundColor: '#fff',
+                        borderRadius: 10,
+                        padding: 14,
+                        marginBottom: 12,
+                        color: '#333',
+                        fontSize: 16,
+                        borderWidth: 1,
+                        borderColor: '#e0e0e0',
+                      }}
+                      placeholder="Unesi iznos sa računa (RSD)"
+                      placeholderTextColor="#999"
+                      value={manualAmount}
+                      onChangeText={setManualAmount}
+                      keyboardType="numeric"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                      style={styles.niceButtonPrimary}
+                      onPress={async () => {
+                        const amountNum = parseInt(manualAmount, 10);
+                        if (!manualAmount || isNaN(amountNum) || amountNum <= 0) {
+                          Alert.alert('Greška', 'Unesite validan iznos.');
+                          return;
+                        }
+                        if (!scannedUserId) {
+                          Alert.alert('Greška', 'Korisnik nije identifikovan.');
+                          return;
+                        }
+                        // Calculate stars and update user
+                        try {
+                          const starsToAward = Math.floor(amountNum / 100);
+                          const { data: clientData, error: clientError } = await supabase
+                            .from('clients')
+                            .select('id, stars')
+                            .eq('user_id', scannedUserId)
+                            .single();
+                          if (clientError) {
+                            Alert.alert('Greška', 'Greška pri pronalaženju korisnika.');
+                            return;
+                          }
+                          const clientId = clientData.id;
+                          const currentStars = clientData.stars || 0;
+                          const newStarsTotal = currentStars + starsToAward;
+                          // Update stars
+                          const { error: updateError } = await supabase
+                            .from('clients')
+                            .update({ stars: newStarsTotal })
+                            .eq('id', clientId);
+                          if (updateError) {
+                            Alert.alert('Greška', 'Greška pri ažuriranju zvezdica.');
+                            return;
+                          }
+                          Alert.alert('Uspeh', `Uspešno dodeljeno ${starsToAward} zvezdica!`);
+                        } catch (e) {
+                          Alert.alert('Greška', 'Došlo je do greške pri dodeli zvezdica.');
+                        }
+                        setShowReceiptScanner(false);
+                        setScannedUserId(null);
+                        setManualAmount('');
+                        setShowManualAmount(false);
+                      }}
+                    >
+                      <Text style={styles.niceButtonPrimaryText}>Potvrdi iznos</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -404,6 +570,49 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  niceButton: {
+    flex: 1,
+    backgroundColor: '#222',
+    borderRadius: 10,
+    paddingVertical: 14,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  niceButtonActive: {
+    backgroundColor: '#4A9B7F',
+  },
+  niceButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  niceButtonTextActive: {
+    color: '#fff',
+  },
+  niceButtonPrimary: {
+    backgroundColor: '#4A9B7F',
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  niceButtonPrimaryText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
   },
 });
 
