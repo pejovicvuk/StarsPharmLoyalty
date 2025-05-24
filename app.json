@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "StarsPharmLoyalty",
+    "name": "Stars Pharm Loyalty",
     "slug": "StarsPharmLoyalty",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,22 +16,24 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow StarsPharmLoyalty to access your camera."
+          "cameraPermission": "This app uses camera to scan QR codes and receipts for loyalty program functionality."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow StarsPharmLoyalty to access your photos to select images for articles."
+          "photosPermission": "This app accesses photo library to select images for shop items."
         }
       ]
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.StarsPharmLoyalty",
+      "bundleIdentifier": "com.starspharm.loyalty",
+      "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "newArchEnabled": false
+        "NSCameraUsageDescription": "This app uses camera to scan QR codes and receipts for loyalty program functionality.",
+        "NSPhotoLibraryUsageDescription": "This app accesses photo library to select images for shop items."
       }
     },
     "android": {
@@ -39,8 +41,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "newArchEnabled": false,
-      "package": "com.anonymous.StarsPharmLoyalty"
+      "package": "com.starspharm.loyalty"
     },
     "web": {
       "favicon": "./assets/favicon.png"
