@@ -400,14 +400,14 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   compactItemImage: {
-    width: '100%',
-    height: 120,
+    width: itemWidth,
+    height: itemWidth,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
   compactPlaceholderImage: {
-    width: '100%',
-    height: 120,
+    width: itemWidth,
+    height: itemWidth,
     backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
