@@ -9,11 +9,17 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  ScrollView,
+  Dimensions,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ShopItem } from '../../types/interfaces';
 import { fetchShopItems } from '../../services/shopService';
 import { supabase } from '../../supabase';
+
+const { width } = Dimensions.get('window');
+const itemWidth = (width - 48) / 2; // 2 items per row with padding
 
 interface StarsShopProps {
   userStars: number;
@@ -25,6 +31,14 @@ interface PurchaseConfirmationModalProps {
   visible: boolean;
   item: ShopItem | null;
   onClose: () => void;
+}
+
+interface ItemDetailModalProps {
+  visible: boolean;
+  item: ShopItem | null;
+  userStars: number;
+  onClose: () => void;
+  onPurchase: (item: ShopItem) => void;
 }
 
 const PurchaseConfirmationModal = ({ visible, item, onClose }: PurchaseConfirmationModalProps) => (
@@ -54,11 +68,78 @@ const PurchaseConfirmationModal = ({ visible, item, onClose }: PurchaseConfirmat
   </Modal>
 );
 
+const ItemDetailModal = ({ visible, item, userStars, onClose, onPurchase }: ItemDetailModalProps) => (
+  <Modal
+    visible={visible}
+    animationType="slide"
+    presentationStyle="pageSheet"
+  >
+    <View style={styles.detailModalContainer}>
+      <View style={styles.detailHeader}>
+        <TouchableOpacity onPress={onClose} style={styles.closeDetailButton}>
+          <Ionicons name="close" size={24} color="#4A9B7F" />
+        </TouchableOpacity>
+        <Text style={styles.detailHeaderTitle}>Detalji artikla</Text>
+        <View style={styles.placeholder} />
+      </View>
+      
+      <ScrollView style={styles.detailContent}>
+        {item?.image ? (
+          <Image 
+            source={{ uri: item.image }} 
+            style={styles.detailImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.detailPlaceholderImage}>
+            <Ionicons name="gift-outline" size={80} color="#ccc" />
+          </View>
+        )}
+        
+        <View style={styles.detailInfo}>
+          <Text style={styles.detailItemName}>{item?.item_name}</Text>
+          <Text style={styles.detailItemDescription}>{item?.description}</Text>
+          
+          <View style={styles.detailFooter}>
+            <View style={styles.detailPriceContainer}>
+              <Ionicons name="star" size={24} color="#4A9B7F" />
+              <Text style={styles.detailItemPrice}>{item?.star_price}</Text>
+            </View>
+            <Text style={styles.detailItemQuantity}>
+              Dostupno: {item?.quantity}
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            style={[
+              styles.detailPurchaseButton,
+              (userStars < (item?.star_price || 0) || (item?.quantity || 0) <= 0) && styles.disabledButton
+            ]}
+            onPress={() => item && onPurchase(item)}
+            disabled={userStars < (item?.star_price || 0) || (item?.quantity || 0) <= 0}
+          >
+            <Text style={styles.detailPurchaseButtonText}>
+              {userStars < (item?.star_price || 0) ? 'Nedovoljno poena' : 
+               (item?.quantity || 0) <= 0 ? 'Nema na stanju' : 'Kupi artikal'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  </Modal>
+);
+
 const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
   const [items, setItems] = useState<ShopItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [purchaseConfirmation, setPurchaseConfirmation] = useState<{
+    visible: boolean;
+    item: ShopItem | null;
+  }>({ visible: false, item: null });
+  const [itemDetail, setItemDetail] = useState<{
     visible: boolean;
     item: ShopItem | null;
   }>({ visible: false, item: null });
@@ -76,6 +157,10 @@ const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
     loadItems();
   }, []);
 
+  useEffect(() => {
+    filterItems();
+  }, [items, searchQuery]);
+
   const loadItems = async () => {
     try {
       const shopItems = await fetchShopItems();
@@ -85,6 +170,22 @@ const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterItems = () => {
+    if (!searchQuery.trim()) {
+      setFilteredItems(items);
+    } else {
+      const filtered = items.filter(item =>
+        item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredItems(filtered);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   const handlePurchase = async (item: ShopItem) => {
@@ -104,6 +205,7 @@ const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
             try {
               await onPurchase(item.id);
               await loadItems();
+              setItemDetail({ visible: false, item: null });
               setPurchaseConfirmation({ visible: true, item });
             } catch (error: any) {
               Alert.alert('Greška', error.message || 'Nije moguće izvršiti kupovinu.');
@@ -114,27 +216,44 @@ const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
     );
   };
 
-  const fetchImage = async (imageUrl: string) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
+  const renderItem = ({ item }: { item: ShopItem }) => (
+    <TouchableOpacity 
+      style={styles.compactItemCard}
+      onPress={() => setItemDetail({ visible: true, item })}
+      activeOpacity={0.7}
+    >
+      {item.image ? (
+        <Image 
+          source={{ uri: item.image }} 
+          style={styles.compactItemImage}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={styles.compactPlaceholderImage}>
+          <Ionicons name="gift-outline" size={30} color="#ccc" />
+        </View>
+      )}
       
-      const response = await fetch(imageUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
-          'Authorization': `Bearer ${session?.access_token || ''}`
-        }
-      });
-      
-      if (!response.ok) throw new Error('Failed to fetch image');
-      
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
-    } catch (error) {
-      console.error('Error fetching image:', error);
-      return null;
-    }
-  };
+      <View style={styles.compactItemInfo}>
+        <Text style={styles.compactItemName} numberOfLines={2} ellipsizeMode="tail">
+          {item.item_name}
+        </Text>
+        <Text style={styles.compactItemDescription} numberOfLines={2} ellipsizeMode="tail">
+          {item.description}
+        </Text>
+        
+        <View style={styles.compactItemFooter}>
+          <View style={styles.compactPriceContainer}>
+            <Ionicons name="star" size={14} color="#4A9B7F" />
+            <Text style={styles.compactItemPrice}>{item.star_price}</Text>
+          </View>
+          <Text style={styles.compactItemQuantity}>
+            {item.quantity > 0 ? `Dostupno: ${item.quantity}` : 'Nema na stanju'}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
@@ -143,56 +262,61 @@ const StarsShop = ({ userStars, onBack, onPurchase }: StarsShopProps) => {
         style={styles.backgroundLogo}
       />
       
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color="#7F8C8D" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Pretražite artikle..."
+            placeholderTextColor="#7F8C8D"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#7F8C8D" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      
       {loading ? (
         <ActivityIndicator size="large" color="#4A9B7F" style={styles.loader} />
       ) : (
-        <FlatList
-          data={items}
-          renderItem={({ item }) => (
-            <View style={styles.itemCard}>
-              {item.image ? (
-                <Image 
-                  source={{ uri: item.image }} 
-                  style={styles.itemImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={styles.placeholderImage}>
-                  <Ionicons name="gift-outline" size={50} color="#ccc" />
-                </View>
-              )}
-              <Text style={styles.itemName}>{item.item_name}</Text>
-              <Text style={styles.itemDescription}>{item.description}</Text>
-              <View style={styles.itemFooter}>
-                <View style={styles.priceContainer}>
-                  <Ionicons name="star" size={18} color="#E6C34A" />
-                  <Text style={styles.itemPrice}>{item.star_price}</Text>
-                </View>
-                <Text style={styles.itemQuantity}>
-                  Dostupno: {item.quantity}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.purchaseButton,
-                  (userStars < item.star_price || item.quantity <= 0) && styles.disabledButton
-                ]}
-                onPress={() => handlePurchase(item)}
-                disabled={userStars < item.star_price || item.quantity <= 0}
-              >
-                <Text style={styles.purchaseButtonText}>Kupi</Text>
-              </TouchableOpacity>
+        <>
+          {filteredItems.length === 0 && searchQuery.length > 0 ? (
+            <View style={styles.noResultsContainer}>
+              <Ionicons name="search" size={60} color="#ccc" />
+              <Text style={styles.noResultsText}>Nema rezultata za "{searchQuery}"</Text>
+              <Text style={styles.noResultsSubtext}>Pokušajte sa drugim pojmom</Text>
             </View>
+          ) : (
+            <FlatList
+              data={filteredItems}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              contentContainerStyle={styles.listContainer}
+              columnWrapperStyle={styles.row}
+              showsVerticalScrollIndicator={false}
+            />
           )}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-        />
+        </>
       )}
       
       <PurchaseConfirmationModal
         visible={purchaseConfirmation.visible}
         item={purchaseConfirmation.item}
         onClose={() => setPurchaseConfirmation({ visible: false, item: null })}
+      />
+      
+      <ItemDetailModal
+        visible={itemDetail.visible}
+        item={itemDetail.item}
+        userStars={userStars}
+        onClose={() => setItemDetail({ visible: false, item: null })}
+        onPurchase={handlePurchase}
       />
     </View>
   );
@@ -211,90 +335,228 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     alignSelf: 'center',
   },
+  // Search bar styles
+  searchContainer: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2C3E50',
+  },
+  clearButton: {
+    padding: 4,
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  noResultsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#7F8C8D',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  noResultsSubtext: {
+    fontSize: 14,
+    color: '#95A5A6',
+    marginTop: 8,
+    textAlign: 'center',
+  },
   listContainer: {
     padding: 16,
   },
-  itemCard: {
+  row: {
+    justifyContent: 'space-between',
+  },
+  // Compact item card styles
+  compactItemCard: {
     backgroundColor: '#fff',
-    borderRadius: 15,
+    borderRadius: 12,
     marginBottom: 16,
+    width: itemWidth,
     overflow: 'hidden',
-    elevation: 3,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
-  itemImage: {
-    width: '100%',
-    aspectRatio: 1,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    alignSelf: 'center',
-    resizeMode: 'cover',
+  compactItemImage: {
+    width: itemWidth,
+    height: itemWidth,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
-  placeholderImage: {
+  compactPlaceholderImage: {
+    width: itemWidth,
+    height: itemWidth,
+    backgroundColor: '#F8F9FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  compactItemInfo: {
+    padding: 12,
+  },
+  compactItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 4,
+    height: 36,
+  },
+  compactItemDescription: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    marginBottom: 8,
+    height: 32,
+    lineHeight: 16,
+  },
+  compactItemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  compactPriceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F8F5',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  compactItemPrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4A9B7F',
+    marginLeft: 3,
+  },
+  compactItemQuantity: {
+    fontSize: 12,
+    color: '#95A5A6',
+    fontWeight: '500',
+  },
+  // Detail modal styles
+  detailModalContainer: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  closeDetailButton: {
+    padding: 8,
+  },
+  detailHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C3E50',
+  },
+  placeholder: {
+    width: 40,
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailImage: {
     width: '100%',
-    height: 200,
+    height: 300,
+  },
+  detailPlaceholderImage: {
+    width: '100%',
+    height: 300,
     backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  itemName: {
-    fontSize: 20,
+  detailInfo: {
+    padding: 20,
+    backgroundColor: '#fff',
+    margin: 16,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  detailItemName: {
+    fontSize: 24,
     fontWeight: '700',
     color: '#2C3E50',
-    padding: 16,
-    paddingBottom: 8,
+    marginBottom: 12,
   },
-  itemDescription: {
-    fontSize: 14,
+  detailItemDescription: {
+    fontSize: 16,
     color: '#7F8C8D',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    lineHeight: 20,
+    lineHeight: 24,
+    marginBottom: 20,
   },
-  itemFooter: {
+  detailFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    marginBottom: 24,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
   },
-  priceContainer: {
+  detailPriceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    padding: 8,
-    borderRadius: 8,
+    backgroundColor: '#F0F8F5',
+    padding: 12,
+    borderRadius: 10,
   },
-  itemPrice: {
-    fontSize: 18,
+  detailItemPrice: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#E6C34A',
-    marginLeft: 6,
+    color: '#4A9B7F',
+    marginLeft: 8,
   },
-  itemQuantity: {
-    fontSize: 14,
+  detailItemQuantity: {
+    fontSize: 16,
     color: '#95A5A6',
     fontWeight: '500',
   },
-  purchaseButton: {
+  detailPurchaseButton: {
     backgroundColor: '#4A9B7F',
-    margin: 16,
-    marginTop: 0,
-    padding: 12,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  purchaseButtonText: {
+  detailPurchaseButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
-  disabledButton: {
-    backgroundColor: '#ccc',
-  },
+  // Original styles for modals
   loader: {
     flex: 1,
     justifyContent: 'center',
@@ -345,6 +607,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
 });
 

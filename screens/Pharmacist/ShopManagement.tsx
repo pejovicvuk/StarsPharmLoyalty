@@ -70,7 +70,9 @@ const ShopManagement = ({ onBack }: ShopManagementProps) => {
       )}
       <View style={styles.itemInfo}>
         <Text style={styles.itemName}>{item.item_name}</Text>
-        <Text style={styles.itemDescription}>{item.description}</Text>
+        <Text style={styles.itemDescription} numberOfLines={2} ellipsizeMode="tail">
+          {item.description}
+        </Text>
         <Text style={styles.itemStars}>{item.star_price} Stars</Text>
         <Text style={styles.itemQuantity}>Količina: {item.quantity}</Text>
       </View>
@@ -210,6 +212,7 @@ const styles = StyleSheet.create({
     color: '#7F8C8D',
     marginBottom: 8,
     lineHeight: 20,
+    height: 40,
   },
   itemStars: {
     fontSize: 16,
