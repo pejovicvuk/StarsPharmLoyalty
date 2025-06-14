@@ -44,7 +44,8 @@
     "stream-browserify": "^3.0.0",
     "tls-browserify": "^0.2.2",
     "tough-cookie": "^5.1.2",
-    "web-streams-polyfill": "^3.2.1"
+    "web-streams-polyfill": "^3.2.1",
+    "expo-linking": "~7.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

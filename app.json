@@ -2,6 +2,7 @@
   "expo": {
     "name": "StarsPharmLoyalty",
     "slug": "StarsPharmLoyalty",
+    "scheme": "starspharmloyalty",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

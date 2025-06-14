@@ -199,4 +199,22 @@ export const fetchPharmacistDetails = async (userId: string): Promise<Pharmacist
     console.error('Exception fetching pharmacist details:', error.message);
     return null;
   }
+};
+
+export const requestPasswordReset = async (email: string): Promise<{ success: boolean; error: string | null }> => {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'starspharmloyalty://reset-password'
+    });
+
+    if (error) {
+      console.error('Password reset error:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, error: null };
+  } catch (error: any) {
+    console.error('Password reset exception:', error);
+    return { success: false, error: error.message };
+  }
 }; 

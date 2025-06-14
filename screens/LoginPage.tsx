@@ -12,7 +12,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { loginUser } from '../services/authService';
+import { loginUser, requestPasswordReset } from '../services/authService';
 
 interface User {
   userId: string;
@@ -31,6 +31,7 @@ const LoginPage = ({ onLogin, onRegister }: LoginPageProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [debugInfo, setDebugInfo] = useState('');
 
   const handleLogin = async () => {
@@ -77,6 +78,37 @@ const LoginPage = ({ onLogin, onRegister }: LoginPageProps) => {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Greška', 'Molimo unesite vaš email adresu');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const { success, error } = await requestPasswordReset(email);
+      
+      if (success) {
+        Alert.alert(
+          'Email poslat',
+          'Poslali smo vam email sa uputstvima za resetovanje lozinke. Molimo proverite vašu email poštu.'
+        );
+      } else {
+        Alert.alert(
+          'Greška',
+          error || 'Došlo je do greške prilikom slanja email-a. Pokušajte ponovo.'
+        );
+      }
+    } catch (error: any) {
+      Alert.alert(
+        'Greška',
+        'Došlo je do greške prilikom slanja email-a. Pokušajte ponovo.'
+      );
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -132,8 +164,16 @@ const LoginPage = ({ onLogin, onRegister }: LoginPageProps) => {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.forgotPasswordButton}>
-          <Text style={styles.forgotPasswordText}>Zaboravili ste lozinku?</Text>
+        <TouchableOpacity 
+          style={styles.forgotPasswordButton}
+          onPress={handleForgotPassword}
+          disabled={isResettingPassword}
+        >
+          {isResettingPassword ? (
+            <ActivityIndicator color="#8BC8A3" />
+          ) : (
+            <Text style={styles.forgotPasswordText}>Zaboravili ste lozinku?</Text>
+          )}
         </TouchableOpacity>
         
         <TouchableOpacity 
