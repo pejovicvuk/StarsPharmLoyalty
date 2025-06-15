@@ -430,6 +430,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     height: 32,
     lineHeight: 16,
+    overflow: 'hidden',
   },
   compactItemFooter: {
     flexDirection: 'row',

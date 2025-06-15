@@ -213,6 +213,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: 20,
     height: 40,
+    overflow: 'hidden',
   },
   itemStars: {
     fontSize: 16,
