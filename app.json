@@ -3,11 +3,13 @@
     "name": "Stars Pharm Loyalty",
     "slug": "StarsPharmLoyalty",
     "scheme": "starspharmloyalty",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "description": "Stars Pharm Loyalty app for managing pharmacy loyalty program and rewards",
+    "primaryColor": "#007AFF",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -24,7 +26,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.starspharm.loyalty",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "This app uses camera to scan QR codes and receipts for loyalty program functionality.",
