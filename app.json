@@ -15,12 +15,6 @@
     },
     "plugins": [
       [
-        "expo-camera",
-        {
-          "cameraPermission": "This app uses camera to scan QR codes and receipts for loyalty program functionality."
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "This app accesses photo library to select images for shop items."
