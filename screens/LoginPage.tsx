@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { loginUser, requestPasswordReset } from '../services/authService';
+import { supabase } from '../supabase';
 
 interface User {
   userId: string;
@@ -57,17 +58,28 @@ const LoginPage = ({ onLogin, onRegister }: LoginPageProps) => {
         return;
       }
       
-      setDebugInfo('Login successful, mapping user data');
-      
+      setDebugInfo('Login successful, fetching user data');
+      // Fetch user data from users table
+      const { data: userData, error: userFetchError } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name, role')
+        .eq('id', user.id)
+        .single();
+      if (!userData || userFetchError) {
+        setDebugInfo('User data fetch failed');
+        Alert.alert('Greška', 'Došlo je do greške prilikom prijave. Pokušajte ponovo.');
+        setIsLoading(false);
+        return;
+      }
+      setDebugInfo('User data ready, mapping user data');
       // Map the user data to your app's User interface
       const appUser: User = {
-        userId: user.id,
-        email: user.email,
-        name: user.first_name,
-        surname: user.last_name,
-        role: user.role,
+        userId: userData.id,
+        email: userData.email,
+        name: userData.first_name,
+        surname: userData.last_name,
+        role: userData.role,
       };
-
       setDebugInfo(`User mapped: ${appUser.name} ${appUser.surname}`);
       onLogin(appUser);
     } catch (error: any) {

@@ -20,15 +20,17 @@ interface ProfileSettingsProps {
   clientDetails: ClientModel;
   onBack: () => void;
   onUpdate: () => void;
+  onLogout: () => void;
   starsCount?: number;
 }
 
-const ProfileSettings = ({ clientDetails, onBack, onUpdate, starsCount }: ProfileSettingsProps) => {
+const ProfileSettings = ({ clientDetails, onBack, onUpdate, onLogout, starsCount }: ProfileSettingsProps) => {
   const [phone, setPhone] = useState(clientDetails.phone);
   const [dateOfBirth, setDateOfBirth] = useState(new Date(clientDetails.date_of_birth));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [tempDate, setTempDate] = useState(new Date(clientDetails.date_of_birth));
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const formatDate = (date: Date) => {
     return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}.`;
@@ -66,6 +68,53 @@ const ProfileSettings = ({ clientDetails, onBack, onUpdate, starsCount }: Profil
     }
   };
 
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Brisanje naloga',
+      'Da li ste sigurni da želite da obrišete svoj nalog? Ova akcija je trajna i ne može se opozvati.',
+      [
+        { text: 'Otkaži', style: 'cancel' },
+        {
+          text: 'Obriši',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              const accessToken = session?.access_token;
+
+              const response = await fetch('https://guibotgxlnyyclmytytv.functions.supabase.co/delete-user', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({ userId: clientDetails.user_id.toString() })
+              });
+              const result = await response.json();
+              console.log('Delete user response:', result);
+              console.log('HTTP status:', response.status);
+              if (result.success) {
+                Alert.alert('Nalog obrisan', 'Vaš nalog je uspešno obrisan.', [
+                  {
+                    text: 'OK',
+                    onPress: onLogout
+                  }
+                ]);
+              } else {
+                Alert.alert('Greška', result.error || 'Došlo je do greške prilikom brisanja naloga.');
+              }
+            } catch (error: any) {
+              console.error('Delete error:', error);
+              Alert.alert('Greška', error.message || 'Došlo je do greške prilikom brisanja naloga.');
+            } finally {
+              setIsDeleting(false);
+            }
+          }
+        }
+      ]
+    );
+  };
   return (
     <View style={styles.container}>
       <Header
@@ -164,13 +213,17 @@ const ProfileSettings = ({ clientDetails, onBack, onUpdate, starsCount }: Profil
               <Text style={styles.saveButtonText}>Sačuvaj Promene</Text>
             )}
           </TouchableOpacity>
-          
+
           <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={onBack}
-            disabled={isLoading}
+            style={[styles.deleteButton, isDeleting && { opacity: 0.6 }]}
+            onPress={handleDeleteAccount}
+            disabled={isDeleting}
           >
-            <Text style={styles.cancelButtonText}>Odustani</Text>
+            {isDeleting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.deleteButtonText}>Obriši nalog</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -212,17 +265,6 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cancelButton: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 15,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#666',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -274,6 +316,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   confirmButton: {
+    fontWeight: '600',
+  },
+  deleteButton: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 8,
+    padding: 15,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

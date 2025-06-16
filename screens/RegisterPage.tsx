@@ -46,8 +46,8 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
   const [tempDate, setTempDate] = useState(new Date(2000, 0, 1));
 
   const validateInputs = () => {
-    if (!firstName || !lastName || !email || !password || !confirmPassword || !dateOfBirth || !gender || !phone) {
-      setError('Molimo popunite sva polja');
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+      setError('Molimo popunite sva obavezna polja');
       return false;
     }
     
@@ -58,16 +58,6 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
     
     if (password.length < 6) {
       setError('Lozinka mora imati najmanje 6 karaktera');
-      return false;
-    }
-    
-    // Validate date of birth (must be in the past and not too far in the past)
-    const today = new Date();
-    const minDate = new Date();
-    minDate.setFullYear(today.getFullYear() - 120); // Max age 120 years
-    
-    if (dateOfBirth > today || dateOfBirth < minDate) {
-      setError('Unesite validan datum rođenja');
       return false;
     }
     
@@ -115,7 +105,7 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
       
       Alert.alert(
         'Uspešna Registracija',
-        'Vaš nalog je uspešno kreiran. Proverite email za verifikaciju, pa se prijavite.',
+        'Vaš nalog je uspešno kreiran. Možete se prijaviti.',
         [{ text: 'OK', onPress: onRegisterSuccess }]
       );
       
@@ -224,7 +214,7 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
             <Text style={styles.sectionTitle}>Dodatne Informacije</Text>
             
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Datum Rođenja</Text>
+              <Text style={styles.inputLabel}>Datum Rođenja (opciono)</Text>
               <TouchableOpacity 
                 style={styles.input}
                 onPress={() => setShowDatePicker(true)}
@@ -286,7 +276,7 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
             </View>
             
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Pol</Text>
+              <Text style={styles.inputLabel}>Pol (opciono)</Text>
               <TouchableOpacity 
                 style={styles.input}
                 onPress={() => setShowGenderPicker(true)}
@@ -321,7 +311,7 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
             </View>
             
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Telefon</Text>
+              <Text style={styles.inputLabel}>Telefon (opciono)</Text>
               <View style={styles.phoneInputContainer}>
                 <Text style={styles.phonePrefix}>+381</Text>
                 <TextInput
@@ -568,6 +558,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  confirmationContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  confirmationText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#333',
+  },
+  resendButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    width: '100%',
+    marginTop: 20,
+  },
+  resendButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

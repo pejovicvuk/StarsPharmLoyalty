@@ -123,6 +123,7 @@ const ClientHome = ({ user, onLogout, onNavigateToSettings }: ClientHomeProps) =
           clientDetails={clientDetails}
           onBack={() => setShowSettings(false)}
           onUpdate={handleProfileUpdate}
+          onLogout={onLogout}
           starsCount={loyaltyPoints}
         />
       ) : showShop ? (

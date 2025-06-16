@@ -17,14 +17,15 @@ interface RegisterUserData {
   lastName: string;
   email: string;
   password: string;
-  dateOfBirth: Date;
-  gender: string;
-  phone: string;
+  dateOfBirth?: Date;
+  gender?: string;
+  phone?: string;
 }
 
 interface RegisterResponse {
   success: boolean;
   error: string | null;
+  requiresConfirmation?: boolean;
 }
 
 export const loginUser = async (email: string, password: string): Promise<LoginResponse> => {
@@ -52,7 +53,7 @@ export const loginUser = async (email: string, password: string): Promise<LoginR
       .eq('id', authData.user.id)
       .single();
     
-    if (userError) {
+    if (userError || !userData) {
       console.error('User data fetch error:', userError);
       return { user: null, error: 'Failed to fetch user data' };
     }
@@ -78,9 +79,18 @@ export const loginUser = async (email: string, password: string): Promise<LoginR
 
 export const registerUser = async (userData: RegisterUserData): Promise<RegisterResponse> => {
   try {
-    console.log('Starting registration process for:', userData.email);
-    
-    // 1. Register user with Supabase Auth
+    // Check if email already exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', userData.email)
+      .single();
+
+    if (existingUser) {
+      return { success: false, error: 'Email adresa već postoji' };
+    }
+
+    // Register user with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
@@ -88,75 +98,47 @@ export const registerUser = async (userData: RegisterUserData): Promise<Register
         data: {
           first_name: userData.firstName,
           last_name: userData.lastName,
-          role: 'client' // Default role is client
+          role: 'client'
         }
       }
     });
-    
+
     if (authError) {
-      console.error('Auth registration error:', authError);
       throw new Error(authError.message);
     }
-    
     if (!authData.user) {
       throw new Error('Failed to create user account');
     }
-    
-    console.log('Auth user created:', authData.user.id);
-    
-    // 2. Insert user record in users table
-    const { data: userRecord, error: userError } = await supabase
-      .from('users')
-      .insert([
-        {
-          id: authData.user.id, // Use the auth user ID
-          email: userData.email,
-          password: '**********', // Store a placeholder since auth handles passwords
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          role: 'client'
-        }
-      ])
-      .select('id')
-      .single();
-    
-    if (userError) {
-      console.error('User insert error:', userError);
-      // Try to clean up the auth user if DB insert fails
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      throw new Error('Error creating user in database');
+
+    // Insert into users table
+    const { error: userInsertError } = await supabase.from('users').insert({
+      id: authData.user.id,
+      email: userData.email,
+      password: '**********',
+      first_name: userData.firstName,
+      last_name: userData.lastName,
+      role: 'client'
+    });
+    if (userInsertError) {
+      throw new Error('Failed to insert user: ' + userInsertError.message);
     }
-    
-    // 3. Generate a unique QR code
+
+    // Insert into clients table
     const qrCode = `CLIENT_${authData.user.id}_${Date.now()}`;
-    
-    // 4. Insert client details with date_of_birth instead of age
-    const { error: clientError } = await supabase
-      .from('clients')
-      .insert([
-        {
-          user_id: authData.user.id,
-          stars: 0,
-          qr_code: qrCode,
-          date_of_birth: userData.dateOfBirth.toISOString().split('T')[0], // Format as YYYY-MM-DD
-          gender: userData.gender,
-          phone: userData.phone
-        }
-      ]);
-    
-    if (clientError) {
-      console.error('Client insert error:', clientError);
-      // Clean up if client creation fails
-      await supabase.from('users').delete().eq('id', authData.user.id);
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      throw new Error('Error creating client profile');
+    const { error: clientInsertError } = await supabase.from('clients').insert({
+      user_id: authData.user.id,
+      stars: 0,
+      qr_code: qrCode,
+      date_of_birth: userData.dateOfBirth ? userData.dateOfBirth.toISOString().split('T')[0] : null,
+      gender: userData.gender || '0',
+      phone: userData.phone || '0'
+    });
+    if (clientInsertError) {
+      throw new Error('Failed to insert client: ' + clientInsertError.message);
     }
-    
-    console.log('Registration successful for:', userData.email);
+
     return { success: true, error: null };
-    
   } catch (error: any) {
-    console.error('Registration process error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -216,5 +198,91 @@ export const requestPasswordReset = async (email: string): Promise<{ success: bo
   } catch (error: any) {
     console.error('Password reset exception:', error);
     return { success: false, error: error.message };
+  }
+};
+
+// Add new function to resend confirmation email
+export const resendConfirmationEmail = async (email: string): Promise<{ success: boolean; error: string | null }> => {
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: 'starspharmloyalty://confirm-email'
+      }
+    });
+
+    if (error) {
+      console.error('Resend confirmation email error:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, error: null };
+  } catch (error: any) {
+    console.error('Resend confirmation email exception:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const deleteUserAccount = async (userId: string): Promise<{ success: boolean; error: string | null }> => {
+  try {
+    // 1. Delete from clients table
+    const { error: clientError } = await supabase
+      .from('clients')
+      .delete()
+      .eq('user_id', userId);
+    if (clientError) throw clientError;
+
+    // 2. Delete from users table
+    const { error: userError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+    if (userError) throw userError;
+
+    // 3. Delete from Supabase Auth
+    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+    if (authError) throw authError;
+
+    return { success: true, error: null };
+  } catch (error: any) {
+    console.error('Error deleting user account:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const createUserProfileIfNeeded = async (user: any, metadata: any) => {
+  try {
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (!existingUser) {
+      const { error: userInsertError } = await supabase.from('users').insert({
+        id: user.id,
+        email: user.email,
+        password: '**********',
+        first_name: metadata.first_name || user.user_metadata?.first_name,
+        last_name: metadata.last_name || user.user_metadata?.last_name,
+        role: metadata.role || user.user_metadata?.role || 'client'
+      });
+
+      if (userInsertError) throw userInsertError;
+
+      if (metadata.role === 'client' || user.user_metadata?.role === 'client') {
+        const qrCode = `CLIENT_${user.id}_${Date.now()}`;
+        const { error: clientInsertError } = await supabase.from('clients').insert({
+          user_id: user.id,
+          stars: 0,
+          qr_code: qrCode
+        });
+        if (clientInsertError) throw clientInsertError;
+      }
+    }
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    throw error;
   }
 }; 
