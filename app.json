@@ -8,18 +8,14 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "description": "Stars Pharm Loyalty app for managing pharmacy loyalty program and rewards",
+    "primaryColor": "#007AFF",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "plugins": [
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "This app uses camera to scan QR codes and receipts for loyalty program functionality."
-        }
-      ],
       [
         "expo-image-picker",
         {
@@ -29,12 +25,13 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.starspharm.loyalty",
+      "bundleIdentifier": "com.starspharm.loyalty2",
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "This app uses camera to scan QR codes and receipts for loyalty program functionality.",
-        "NSPhotoLibraryUsageDescription": "This app accesses photo library to select images for shop items."
+        "NSPhotoLibraryUsageDescription": "This app accesses photo library to select images for shop items.",
+        "NSLocationWhenInUseUsageDescription": "This app does not use your location, but this permission is required for compatibility with some features."
       }
     },
     "android": {

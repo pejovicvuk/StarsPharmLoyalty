@@ -39,7 +39,6 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
   const [agreesToTerms, setAgreesToTerms] = useState(false);
   
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const [showGenderPicker, setShowGenderPicker] = useState(false);
 
   // Add new state for temporary date selection
@@ -47,24 +46,24 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
 
   const validateInputs = () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      setError('Molimo popunite sva obavezna polja');
+      Alert.alert('Greška', 'Molimo popunite sva obavezna polja');
       return false;
     }
     
     if (password !== confirmPassword) {
-      setError('Lozinke se ne podudaraju');
+      Alert.alert('Greška', 'Lozinke se ne podudaraju');
       return false;
     }
     
     if (password.length < 6) {
-      setError('Lozinka mora imati najmanje 6 karaktera');
+      Alert.alert('Greška', 'Lozinka mora imati najmanje 6 karaktera');
       return false;
     }
     
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError('Unesite validnu email adresu');
+      Alert.alert('Greška', 'Unesite validnu email adresu');
       return false;
     }
     
@@ -75,7 +74,6 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
     console.log('Register button clicked');
     
     if (!validateInputs()) {
-      console.log('Validation failed:', error);
       return;
     }
     
@@ -85,7 +83,6 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
     }
     
     setIsLoading(true);
-    setError('');
     
     try {
       console.log('Calling registerUser service...');
@@ -112,9 +109,9 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
     } catch (error: any) {
       console.error('Registration error:', error);
       if (error.message.includes('Email address') && error.message.includes('invalid')) {
-        setError('Email adresa nije validna. Molimo unesite postojeću email adresu.');
+        Alert.alert('Greška', 'Email adresa nije validna. Molimo unesite postojeću email adresu.');
       } else {
-        setError('Došlo je do greške pri registraciji. Pokušajte ponovo.');
+        Alert.alert('Greška', 'Došlo je do greške pri registraciji. Pokušajte ponovo.');
       }
     } finally {
       setIsLoading(false);
@@ -148,8 +145,6 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <Text style={styles.title}>Registracija</Text>
           <Text style={styles.subtitle}>Kreirajte vaš Stars Pharm nalog</Text>
-          
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
           
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Lični Podaci</Text>

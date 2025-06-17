@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import ShopManagement from './ShopManagement';
-import { Camera, CameraView } from 'expo-camera';
+import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import { supabase } from '../../supabase';
 import receiptScanner from '../../services/receiptScanner';
 
@@ -43,13 +43,15 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
   const [manualAmount, setManualAmount] = useState('');
   const [showManualAmount, setShowManualAmount] = useState(false);
 
+  const device = useCameraDevice('back');
+
   const requestCameraPermission = async () => {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    setHasPermission(status === 'granted');
+    const permission = await Camera.requestCameraPermission();
+    setHasPermission(permission === 'granted');
     lastScannedRef.current = null;
   };
 
-  const handleBarCodeScanned = useCallback(({ type, data }: { type: string; data: string }) => {
+  const handleBarCodeScanned = useCallback((data: string) => {
     // Prevent multiple scans of the same code within 2 seconds
     if (lastScannedRef.current === data) {
       return;
@@ -79,7 +81,7 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
     }
   }, []);
 
-  const handleReceiptScanned = useCallback(({ type, data }: { type: string; data: string }) => {
+  const handleReceiptScanned = useCallback((data: string) => {
     // Prevent multiple scans of the same code within 2 seconds
     if (lastScannedRef.current === data) {
       return;
@@ -124,6 +126,19 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
       }, 2000);
     }
   }, [scannedUserId]);
+
+  const codeScanner = useCodeScanner({
+    codeTypes: ['qr'],
+    onCodeScanned: (codes) => {
+      if (codes.length > 0 && codes[0].value) {
+        if (showScanner) {
+          handleBarCodeScanned(codes[0].value);
+        } else if (showReceiptScanner) {
+          handleReceiptScanned(codes[0].value);
+        }
+      }
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -216,14 +231,15 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
             <Text>Requesting camera permission</Text>
           ) : hasPermission === false ? (
             <Text>No access to camera</Text>
-          ) : (
-            <CameraView
+          ) : device ? (
+            <Camera
               style={StyleSheet.absoluteFillObject}
-              barcodeScannerSettings={{
-                barcodeTypes: ["qr"],
-              }}
-              onBarcodeScanned={handleBarCodeScanned}
+              device={device}
+              isActive={showScanner}
+              codeScanner={codeScanner}
             />
+          ) : (
+            <Text>No camera device found</Text>
           )}
         </View>
       </Modal>
@@ -251,14 +267,15 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
               <Text>Requesting camera permission</Text>
             ) : hasPermission === false ? (
               <Text>No access to camera</Text>
-            ) : (
-              <CameraView
+            ) : device ? (
+              <Camera
                 style={StyleSheet.absoluteFillObject}
-                barcodeScannerSettings={{
-                  barcodeTypes: ["qr"],
-                }}
-                onBarcodeScanned={handleReceiptScanned}
+                device={device}
+                isActive={showReceiptScanner}
+                codeScanner={codeScanner}
               />
+            ) : (
+              <Text>No camera device found</Text>
             )}
             {/* Overlay for manual entry */}
             <View

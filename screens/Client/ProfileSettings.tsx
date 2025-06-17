@@ -11,6 +11,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Header from '../../components/Header';
 import { supabase } from '../../supabase';
@@ -25,12 +26,14 @@ interface ProfileSettingsProps {
 }
 
 const ProfileSettings = ({ clientDetails, onBack, onUpdate, onLogout, starsCount }: ProfileSettingsProps) => {
-  const [phone, setPhone] = useState(clientDetails.phone);
+  const [phone, setPhone] = useState(clientDetails.phone === '0' ? '' : clientDetails.phone);
   const [dateOfBirth, setDateOfBirth] = useState(new Date(clientDetails.date_of_birth));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [tempDate, setTempDate] = useState(new Date(clientDetails.date_of_birth));
   const [isDeleting, setIsDeleting] = useState(false);
+  const [gender, setGender] = useState(clientDetails.gender === '0' ? '' : clientDetails.gender);
+  const [showGenderPicker, setShowGenderPicker] = useState(false);
 
   const formatDate = (date: Date) => {
     return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}.`;
@@ -52,6 +55,7 @@ const ProfileSettings = ({ clientDetails, onBack, onUpdate, onLogout, starsCount
         .update({
           phone: phone,
           date_of_birth: dateOfBirth.toISOString(),
+          gender: gender
         })
         .eq('id', clientDetails.id);
 
@@ -133,7 +137,7 @@ const ProfileSettings = ({ clientDetails, onBack, onUpdate, onLogout, starsCount
               style={[styles.input, styles.phoneInput]}
               value={phone.replace('+381', '')}
               onChangeText={(text) => setPhone(formatPhoneNumber(text))}
-              placeholder="6X XXXXXX"
+              placeholder="Unesite broj telefona"
               keyboardType="phone-pad"
             />
           </View>
@@ -198,6 +202,50 @@ const ProfileSettings = ({ clientDetails, onBack, onUpdate, onLogout, starsCount
                 maximumDate={new Date()}
               />
             )
+          )}
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Pol</Text>
+          <TouchableOpacity 
+            style={styles.input}
+            onPress={() => setShowGenderPicker(true)}
+          >
+            <Text style={gender ? styles.pickerValue : styles.pickerPlaceholder}>
+              {gender || 'Izaberite pol'}
+            </Text>
+          </TouchableOpacity>
+          
+          {showGenderPicker && (
+            <Modal
+              transparent={true}
+              animationType="none"
+              visible={showGenderPicker}
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.pickerHeader}>
+                  <TouchableOpacity onPress={() => setShowGenderPicker(false)}>
+                    <Text style={styles.datePickerButtonText}>Otkaži</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => setShowGenderPicker(false)}
+                  >
+                    <Text style={[styles.datePickerButtonText, styles.confirmButton]}>Potvrdi</Text>
+                  </TouchableOpacity>
+                </View>
+                <Picker
+                  selectedValue={gender}
+                  onValueChange={(itemValue: string) => {
+                    setGender(itemValue);
+                  }}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Izaberite pol" value="" />
+                  <Picker.Item label="Muški" value="muški" />
+                  <Picker.Item label="Ženski" value="ženski" />
+                </Picker>
+              </View>
+            </Modal>
           )}
         </View>
 
@@ -329,6 +377,37 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  pickerValue: {
+    fontSize: 16,
+    color: '#333',
+  },
+  pickerPlaceholder: {
+    fontSize: 16,
+    color: '#999',
+  },
+  modalContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderColor: '#E8E8E8',
+    zIndex: 1000,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  picker: {
+    height: 200,
+    backgroundColor: 'white',
   },
 });
 

@@ -101,6 +101,19 @@ const LoginPage = ({ onLogin, onRegister }: LoginPageProps) => {
 
     setIsResettingPassword(true);
     try {
+      // First check if the email exists in the database
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('email', email)
+        .single();
+
+      if (userError || !userData) {
+        Alert.alert('Greška', 'Nalog ne postoji na ovom mejlu');
+        setIsResettingPassword(false);
+        return;
+      }
+
       const { success, error } = await requestPasswordReset(email);
       
       if (success) {
