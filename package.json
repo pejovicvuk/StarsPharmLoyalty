@@ -33,6 +33,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-vision-camera": "^4.7.0",
     "react-native-websocket": "^1.0.2",
+    "receiptrs": "^1.0.0",
     "stream-browserify": "^3.0.0",
     "tls-browserify": "^0.2.2",
     "tough-cookie": "^5.1.2",
