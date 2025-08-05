@@ -395,7 +395,6 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
                                 receipt_url: 'manuelno dodate zvezdice',
                                 amount: amountNum,
                                 date: new Date().toISOString(),
-                                location: 'manuelno', 
                               },
                             ]);
                           if (receiptError) {
@@ -608,13 +607,15 @@ const styles = StyleSheet.create({
   },
   qrAlignBox: {
     position: 'absolute',
-    top: '40%', // Adjust as needed for vertical alignment
-    left: '30%', // Adjust as needed for horizontal alignment
-    width: '40%', // Adjust as needed for width
-    height: '20%', // Adjust as needed for height
-    borderWidth: 2,
-    borderColor: '#4A9B7F', // Green border
-    borderRadius: 10,
+    top: '25%',
+    left: '15%',
+    width: '70%',
+    height: '40%',
+    borderWidth: 3,
+    borderColor: '#4A9B7F',
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    zIndex: 10,
   },
   manualToggleButton: {
     backgroundColor: '#222',
