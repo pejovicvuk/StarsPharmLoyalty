@@ -38,8 +38,6 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScannedRef = useRef<string | null>(null);
-  const [manualReceiptUrl, setManualReceiptUrl] = useState('');
-  const [showManualInput, setShowManualInput] = useState(false);
   const [manualAmount, setManualAmount] = useState('');
   const [showManualAmount, setShowManualAmount] = useState(false);
 
@@ -232,12 +230,16 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
           ) : hasPermission === false ? (
             <Text>No access to camera</Text>
           ) : device ? (
-            <Camera
-              style={StyleSheet.absoluteFillObject}
-              device={device}
-              isActive={showScanner}
-              codeScanner={codeScanner}
-            />
+            <>
+              <Camera
+                style={StyleSheet.absoluteFillObject}
+                device={device}
+                isActive={showScanner}
+                codeScanner={codeScanner}
+              />
+              {/* QR Code Alignment Box overlay */}
+              <View style={styles.qrAlignBox} pointerEvents="none" />
+            </>
           ) : (
             <Text>No camera device found</Text>
           )}
@@ -251,8 +253,6 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
         onRequestClose={() => {
           setShowReceiptScanner(false);
           setScannedUserId(null);
-          setManualReceiptUrl('');
-          setShowManualInput(false);
           setManualAmount('');
           setShowManualAmount(false);
         }}
@@ -268,12 +268,16 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
             ) : hasPermission === false ? (
               <Text>No access to camera</Text>
             ) : device ? (
-              <Camera
-                style={StyleSheet.absoluteFillObject}
-                device={device}
-                isActive={showReceiptScanner}
-                codeScanner={codeScanner}
-              />
+              <>
+                <Camera
+                  style={StyleSheet.absoluteFillObject}
+                  device={device}
+                  isActive={showReceiptScanner}
+                  codeScanner={codeScanner}
+                />
+                {/* QR Code Alignment Box overlay */}
+                <View style={styles.qrAlignBox} pointerEvents="none" />
+              </>
             ) : (
               <Text>No camera device found</Text>
             )}
@@ -284,92 +288,47 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                backgroundColor: 'rgba(0,0,0,0.92)',
-                paddingTop: 20,
-                paddingBottom: 30,
-                paddingHorizontal: 20,
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
+                backgroundColor: '#fff',
+                paddingTop: 14,
+                paddingBottom: 18,
+                paddingHorizontal: 10,
+                borderTopLeftRadius: 12,
+                borderTopRightRadius: 12,
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: -2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 8,
-                elevation: 8,
+                shadowOffset: { width: 0, height: -1 },
+                shadowOpacity: 0.08,
+                shadowRadius: 4,
+                elevation: 4,
               }}
             >
               <ScrollView
-                contentContainerStyle={{ paddingBottom: 10 }}
+                contentContainerStyle={{ paddingBottom: 6 }}
                 keyboardShouldPersistTaps="handled"
               >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 12 }}>
                   <TouchableOpacity
-                    style={[styles.niceButton, showManualInput && styles.niceButtonActive]}
-                    onPress={() => {
-                      setShowManualInput((v) => !v);
-                      setShowManualAmount(false);
-                    }}
+                    style={[
+                      styles.manualToggleButton,
+                      showManualAmount && { backgroundColor: '#4A9B7F' },
+                      {
+                        minWidth: 180,
+                        borderRadius: 10,
+                        paddingVertical: 14,
+                        paddingHorizontal: 32,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      },
+                    ]}
+                    onPress={() => setShowManualAmount((v) => !v)}
                   >
-                    <Text style={[styles.niceButtonText, showManualInput && styles.niceButtonTextActive]}>
-                      {showManualInput ? 'Sakrij unos linka' : 'Unesi link ručno'}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.niceButton, showManualAmount && styles.niceButtonActive]}
-                    onPress={() => {
-                      setShowManualAmount((v) => !v);
-                      setShowManualInput(false);
-                    }}
-                  >
-                    <Text style={[styles.niceButtonText, showManualAmount && styles.niceButtonTextActive]}>
-                      {showManualAmount ? 'Sakrij unos iznosa' : 'Unesi iznos ručno'}
+                    <Text style={[
+                      styles.manualToggleButtonText,
+                      { fontSize: 16, color: '#fff', fontWeight: '700' },
+                    ]}>
+                      {showManualAmount ? 'Sakrij unos iznosa' : 'Unesi iznos sa računa ručno'}
                     </Text>
                   </TouchableOpacity>
                 </View>
-                {showManualInput && (
-                  <View style={{ marginTop: 10 }}>
-                    <TextInput
-                      style={{
-                        backgroundColor: '#fff',
-                        borderRadius: 10,
-                        padding: 14,
-                        marginBottom: 12,
-                        color: '#333',
-                        fontSize: 16,
-                        borderWidth: 1,
-                        borderColor: '#e0e0e0',
-                      }}
-                      placeholder="Nalepi link sa računa"
-                      placeholderTextColor="#999"
-                      value={manualReceiptUrl}
-                      onChangeText={setManualReceiptUrl}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    <TouchableOpacity
-                      style={styles.niceButtonPrimary}
-                      onPress={async () => {
-                        if (!manualReceiptUrl) {
-                          Alert.alert('Greška', 'Unesite link sa računa.');
-                          return;
-                        }
-                        if (scannedUserId) {
-                          const result = await receiptScanner.processReceiptScan(manualReceiptUrl, scannedUserId);
-                          if (result.success) {
-                            Alert.alert('Uspeh', 'Račun je uspešno dodat.');
-                          } else {
-                            Alert.alert('Greška', result.message || 'Došlo je do greške.');
-                          }
-                        }
-                        setShowReceiptScanner(false);
-                        setScannedUserId(null);
-                        setManualReceiptUrl('');
-                        setShowManualInput(false);
-                      }}
-                    >
-                      <Text style={styles.niceButtonPrimaryText}>Potvrdi</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
                 {showManualAmount && (
                   <View style={{ marginTop: 10 }}>
                     <TextInput
@@ -392,7 +351,7 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
                       autoCorrect={false}
                     />
                     <TouchableOpacity
-                      style={styles.niceButtonPrimary}
+                      style={[styles.niceButtonPrimary, { marginTop: 10, alignSelf: 'center', width: '80%' }]}
                       onPress={async () => {
                         const amountNum = parseInt(manualAmount, 10);
                         if (!manualAmount || isNaN(amountNum) || amountNum <= 0) {
@@ -425,6 +384,22 @@ const PharmacistHome = ({ user, onLogout }: PharmacistHomeProps) => {
                             .eq('id', clientId);
                           if (updateError) {
                             Alert.alert('Greška', 'Greška pri ažuriranju zvezdica.');
+                            return;
+                          }
+                          // Insert into receipts table for manual allocation
+                          const { error: receiptError } = await supabase
+                            .from('receipts')
+                            .insert([
+                              {
+                                client_id: clientId,
+                                receipt_url: 'manuelno dodate zvezdice',
+                                amount: amountNum,
+                                date: new Date().toISOString(),
+                                location: 'manuelno', 
+                              },
+                            ]);
+                          if (receiptError) {
+                            Alert.alert('Greška', 'Greška pri upisu u evidenciju računa.');
                             return;
                           }
                           Alert.alert('Uspeh', `Uspešno dodeljeno ${starsToAward} zvezdica!`);
@@ -630,6 +605,34 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 18,
+  },
+  qrAlignBox: {
+    position: 'absolute',
+    top: '40%', // Adjust as needed for vertical alignment
+    left: '30%', // Adjust as needed for horizontal alignment
+    width: '40%', // Adjust as needed for width
+    height: '20%', // Adjust as needed for height
+    borderWidth: 2,
+    borderColor: '#4A9B7F', // Green border
+    borderRadius: 10,
+  },
+  manualToggleButton: {
+    backgroundColor: '#222',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  manualToggleButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
 
