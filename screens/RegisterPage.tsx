@@ -42,7 +42,12 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
   const [showGenderPicker, setShowGenderPicker] = useState(false);
 
   // Add new state for temporary date selection
-  const [tempDate, setTempDate] = useState(new Date(2000, 0, 1));
+  const [tempDate, setTempDate] = useState(new Date(1990, 0, 1));
+  const [datePickerStep, setDatePickerStep] = useState<'year' | 'month' | 'day'>('year');
+  const [hasSelectedDate, setHasSelectedDate] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const validateInputs = () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
@@ -212,9 +217,17 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
               <Text style={styles.inputLabel}>Datum Rođenja (opciono)</Text>
               <TouchableOpacity 
                 style={styles.input}
-                onPress={() => setShowDatePicker(true)}
+                onPress={() => {
+                  setShowDatePicker(true);
+                  setSelectedYear(null);
+                  setSelectedMonth(null);
+                  setSelectedDay(null);
+                  setDatePickerStep('year');
+                }}
               >
-                <Text>{formatDate(dateOfBirth)}</Text>
+                <Text style={hasSelectedDate ? styles.pickerValue : styles.pickerPlaceholder}>
+                  {hasSelectedDate ? formatDate(dateOfBirth) : 'Unesite datum rođenja'}
+                </Text>
               </TouchableOpacity>
               
               {showDatePicker && (
@@ -254,18 +267,132 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
                     </View>
                   </Modal>
                 ) : (
-                  <DateTimePicker
-                    value={dateOfBirth}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowDatePicker(false);
-                      if (selectedDate) {
-                        setDateOfBirth(selectedDate);
-                      }
-                    }}
-                    maximumDate={new Date()}
-                  />
+                  <Modal
+                    transparent={true}
+                    animationType="fade"
+                    visible={showDatePicker}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.simpleDatePickerContainer}>
+                        <View style={styles.datePickerHeader}>
+                          <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                            <Text style={styles.datePickerButtonText}>Otkaži</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.simplePickerContent}>
+                          <Text style={styles.simplePickerTitle}>
+                            {datePickerStep === 'year' && 'Izaberite godinu rođenja'}
+                            {datePickerStep === 'month' && 'Izaberite mesec rođenja'}
+                            {datePickerStep === 'day' && 'Izaberite dan rođenja'}
+                          </Text>
+                          
+                          {datePickerStep === 'year' && (
+                            <View style={styles.stepPickerContainer}>
+                              <ScrollView 
+                                style={styles.stepPickerScroll} 
+                                showsVerticalScrollIndicator={false}
+                              >
+                                {Array.from({length: 100}, (_, i) => new Date().getFullYear() - i).map((year) => (
+                                  <TouchableOpacity
+                                    key={year}
+                                    style={[
+                                      styles.stepPickerItem,
+                                      selectedYear === year && styles.stepPickerItemSelected
+                                    ]}
+                                    onPress={() => {
+                                      setSelectedYear(year);
+                                      const newDate = new Date(1990, 0, 1);
+                                      newDate.setFullYear(year);
+                                      setTempDate(newDate);
+                                      setDatePickerStep('month');
+                                      setHasSelectedDate(true);
+                                    }}
+                                  >
+                                    <Text style={[
+                                      styles.stepPickerItemText,
+                                      selectedYear === year && styles.stepPickerItemTextSelected
+                                    ]}>
+                                      {year}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </ScrollView>
+                            </View>
+                          )}
+                          
+                          {datePickerStep === 'month' && (
+                            <View style={styles.stepPickerContainer}>
+                              <ScrollView style={styles.stepPickerScroll} showsVerticalScrollIndicator={false}>
+                                {[
+                                  'Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun',
+                                  'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'
+                                ].map((month, index) => (
+                                  <TouchableOpacity
+                                    key={month}
+                                    style={[
+                                      styles.stepPickerItem,
+                                      selectedMonth === index && styles.stepPickerItemSelected
+                                    ]}
+                                    onPress={() => {
+                                      setSelectedMonth(index);
+                                      const newDate = new Date(tempDate);
+                                      newDate.setMonth(index);
+                                      setTempDate(newDate);
+                                      setDatePickerStep('day');
+                                    }}
+                                  >
+                                    <Text style={[
+                                      styles.stepPickerItemText,
+                                      selectedMonth === index && styles.stepPickerItemTextSelected
+                                    ]}>
+                                      {month}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </ScrollView>
+                            </View>
+                          )}
+                          
+                          {datePickerStep === 'day' && (
+                            <View style={styles.stepPickerContainer}>
+                              <View style={styles.dayGridContainer}>
+                                {Array.from({length: 31}, (_, i) => i + 1).map((day) => (
+                                  <TouchableOpacity
+                                    key={day}
+                                    style={[
+                                      styles.dayGridItem,
+                                      selectedDay === day && styles.dayGridItemSelected
+                                    ]}
+                                    onPress={() => {
+                                      setSelectedDay(day);
+                                      const newDate = new Date(tempDate);
+                                      newDate.setDate(day);
+                                      setTempDate(newDate);
+                                      setDateOfBirth(newDate);
+                                      setHasSelectedDate(true);
+                                      setShowDatePicker(false);
+                                      // Reset all selection states for next use
+                                      setSelectedYear(null);
+                                      setSelectedMonth(null);
+                                      setSelectedDay(null);
+                                      setDatePickerStep('year');
+                                    }}
+                                  >
+                                    <Text style={[
+                                      styles.dayGridItemText,
+                                      selectedDay === day && styles.dayGridItemTextSelected
+                                    ]}>
+                                      {day}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  </Modal>
                 )
               )}
             </View>
@@ -282,26 +409,83 @@ const RegisterPage = ({ onRegisterSuccess, onBackToLogin }: RegisterPageProps) =
               </TouchableOpacity>
               
               {showGenderPicker && (
-                <Modal
-                  transparent={true}
-                  animationType="none"
-                  visible={showGenderPicker}
-                >
-                  <View style={styles.modalContainer}>
-                    <Picker
-                      selectedValue={gender}
-                      onValueChange={(itemValue) => {
-                        setGender(itemValue);
-                        setShowGenderPicker(false);
-                      }}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Izaberite pol" value="" />
-                      <Picker.Item label="Muški" value="muški" />
-                      <Picker.Item label="Ženski" value="ženski" />
-                    </Picker>
-                  </View>
-                </Modal>
+                Platform.OS === 'ios' ? (
+                  <Modal
+                    transparent={true}
+                    animationType="none"
+                    visible={showGenderPicker}
+                  >
+                    <View style={styles.modalContainer}>
+                      <Picker
+                        selectedValue={gender}
+                        onValueChange={(itemValue) => {
+                          setGender(itemValue);
+                          setShowGenderPicker(false);
+                        }}
+                        style={styles.picker}
+                      >
+                        <Picker.Item label="Izaberite pol" value="" />
+                        <Picker.Item label="Muški" value="muški" />
+                        <Picker.Item label="Ženski" value="ženski" />
+                      </Picker>
+                    </View>
+                  </Modal>
+                ) : (
+                  <Modal
+                    transparent={true}
+                    animationType="fade"
+                    visible={showGenderPicker}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.simpleDatePickerContainer}>
+                        <View style={styles.datePickerHeader}>
+                          <TouchableOpacity onPress={() => setShowGenderPicker(false)}>
+                            <Text style={styles.datePickerButtonText}>Otkaži</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.simplePickerContent}>
+                          <Text style={styles.simplePickerTitle}>Izaberite pol</Text>
+                          <View style={styles.genderPickerContainer}>
+                            <TouchableOpacity
+                              style={[
+                                styles.genderOption,
+                                gender === 'muški' && styles.genderOptionSelected
+                              ]}
+                              onPress={() => {
+                                setGender('muški');
+                                setShowGenderPicker(false);
+                              }}
+                            >
+                              <Text style={[
+                                styles.genderOptionText,
+                                gender === 'muški' && styles.genderOptionTextSelected
+                              ]}>
+                                Muški
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[
+                                styles.genderOption,
+                                gender === 'ženski' && styles.genderOptionSelected
+                              ]}
+                              onPress={() => {
+                                setGender('ženski');
+                                setShowGenderPicker(false);
+                              }}
+                            >
+                              <Text style={[
+                                styles.genderOptionText,
+                                gender === 'ženski' && styles.genderOptionTextSelected
+                              ]}>
+                                Ženski
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  </Modal>
+                )
               )}
             </View>
             
@@ -575,6 +759,120 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Simple date picker styles for Android
+  simpleDatePickerContainer: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    paddingBottom: 20,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  simplePickerContent: {
+    padding: 20,
+  },
+  simplePickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  // Step-by-step date picker styles for Android
+  stepPickerContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  stepPickerScroll: {
+    height: 200,
+    width: '100%',
+  },
+  stepPickerItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginVertical: 4,
+    alignItems: 'center',
+    minWidth: 120,
+    backgroundColor: '#f5f5f5',
+  },
+  stepPickerItemSelected: {
+    backgroundColor: '#4A9B7F',
+  },
+  stepPickerItemText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '500',
+  },
+  stepPickerItemTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  // Day grid styles
+  dayGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+  },
+  dayGridItem: {
+    width: 40,
+    height: 40,
+    margin: 3,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  dayGridItemSelected: {
+    backgroundColor: '#4A9B7F',
+    borderColor: '#4A9B7F',
+  },
+  dayGridItemText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  dayGridItemTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  // Gender picker styles
+  genderPickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 20,
+  },
+  genderOption: {
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#f5f5f5',
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  genderOptionSelected: {
+    backgroundColor: '#4A9B7F',
+    borderColor: '#4A9B7F',
+  },
+  genderOptionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  genderOptionTextSelected: {
+    color: '#fff',
     fontWeight: '600',
   },
 });
